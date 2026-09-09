@@ -61,3 +61,6 @@ Camera frames are processed only in browser memory; audio input is never request
 Recognition thresholds are provisional pilot defaults, frozen within this version. 90% recognition accuracy, 24 Hz tracking, and sub-100 ms median frame-to-trail latency are research targets, not measured achievements. Physical webcam/phone validation and participant testing are still required.
 
 The interface exposes an optional read-only WebMCP session-status tool on browsers that support it. Live WebMCP validation is pending.
+
+### Guided first spell
+Choose **Start tutorial** in Practice for three camera-driven steps: curl to prepare, point and trace a circle, then curl to cast Ward. You can exit or replay it. Completion stays on this browser; tutorial strokes do not affect practice accuracy or study results. Failed casts explain recognition problems separately from spell cooldowns and combat requirements.

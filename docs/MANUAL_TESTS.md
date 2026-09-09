@@ -55,3 +55,9 @@ In a browser with document.modelContext, verify read_spellbound_session registra
 - Briefly obscure the hand, then return close to its prior position: the same stroke resumes.
 - Curl the index deliberately to finish; missing frames must not count toward the curl hold.
 - Export a study from the previous input version before starting fresh.
+
+## Guided first spell
+- Start tutorial before and after enabling the camera; curl to prepare, point until Drawing, trace a circle, then curl to cast. Steps must advance from observed hand states.
+- Try a wrong rune, a tiny stroke, brief tracking loss and camera restart; confirm useful retry instructions. Only a recognized Ward completes the lesson.
+- Confirm tutorial attempts do not change practice accuracy or study trial counts. Exit or change modes midway, and replay after refreshing a completed lesson.
+- In a duel, try a spell on cooldown, Mend at full health, Ward with a shield active, and Dispel without an incoming attack. Confirm recognition is distinguished from combat rejection.
