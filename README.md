@@ -27,9 +27,9 @@ On this Windows host Node 24 completed compilation but hit a native shutdown ass
 
 1. Open **Practice** and enable the camera.
 2. Keep one hand visible in even light. Palm generally faces the camera.
-3. Relax your hand for 150 ms to arm tracking.
+3. Curl your index finger for 150 ms to arm tracking.
 4. Extend the index finger and curl the others. Hold for 120 ms, then draw.
-5. Relax the index finger for 150 ms to finish the stroke.
+5. Curl the index finger and hold for about 350 ms to finish the stroke. Brief tracking gaps are tolerated; you have up to 20 seconds to draw.
 6. Select each spell card for prompted practice; the dotted guide is a tracing aid.
 7. Open **Duel**, show your hand, and choose fixed or adaptive difficulty.
 

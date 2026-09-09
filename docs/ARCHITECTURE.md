@@ -10,11 +10,11 @@ Local model: Google's hand_landmarker float16 version 1. MediaPipe JS and WASM c
 
 ## Geometry and stroke intent
 
-Input uses one hand and the camera plane. Cursor x is mirrored and corrected for camera aspect ratio before recognition. Rendering letterboxes the corresponding coordinate plane. Handedness only detects hand changes; either hand is supported.
+Input uses one hand and the camera plane. Cursor x is mirrored and corrected for camera aspect ratio before recognition. Rendering letterboxes the corresponding coordinate plane. Either hand is supported. Handedness labels may flicker; spatial continuity, rather than a label change alone, guards against switching hands.
 
 Index extension uses the MCP/PIP/tip angle and wrist-relative reach. At least two of the other three fingers must be curled. Thumb state is ignored. Landmarks include relative depth for pose gating; rune matching uses only 2D x/y.
 
-Gate states: rearm → idle → arming → drawing → releasing. Stable relaxed pose arms in 150 ms; stable pointing starts in 120 ms; 150 ms release emits once. Release jitter returns to drawing. Exponential smoothing has a 25 ms time constant and a small movement deadband. Hand loss, handedness change, or a sample gap over 250 ms cancels, resets smoothing, and requires release. Strokes longer than 8 seconds cancel. Very small or malformed strokes are rejected.
+Gate states: rearm → idle → arming → drawing → releasing, with a recovering state for brief tracking gaps. Curling the index finger arms in 150 ms; stable pointing starts in 120 ms. Once drawing, small pose changes and other-finger movement do not end the stroke. A clearly curled index held for 350 ms across at least three valid samples emits once. Brief release jitter returns to drawing. Tracking gaps up to 500 ms preserve the stroke, hide the cursor, and reset release confirmation. Reacquisition checks wrist continuity against palm size; distant hand replacements cancel. Longer tracking loss cancels and requires rearming. The stroke limit is 20 seconds. Exponential smoothing retains a 25 ms time constant and movement deadband. Very small or malformed strokes are rejected.
 
 ## Recognition
 
@@ -43,5 +43,7 @@ Only preferences, prompted practice counts, and the current study are kept in ve
 Tracking Hz: completed worker updates over a rolling two-second window (including no-hand frames).
 Inference: rolling median of the latest 90 worker inference calls.
 Frame-to-trail: rolling median from initiating ImageBitmap capture to the next animation-frame callback after processing; it is a software proxy, not measured photon-to-display latency.
-Release-to-cast: first nonpointing sample to recognition/dispatch, including 150 ms release gating.
+Release-to-cast: first clearly curled-index sample to recognition/dispatch, including 350 ms release gating.
 Study rows snapshot the current rolling tracking metrics at trial completion. Device hardware must be recorded by the researcher.
+
+Input version continuous-stroke-v2 is included in study metadata and CSV. Older saved studies remain exportable, but cannot continue under changed input rules; the UI offers a fresh session.

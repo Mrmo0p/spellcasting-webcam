@@ -25,7 +25,7 @@ Primary recognition accuracy = correct measured predictions / all measured attem
 
 Report completion, win/loss/aborted outcomes, active game duration, cast counts, blocked attacks, and within-participant rating differences by condition. Log interrupted/restarted duels and do not present them as uninterrupted completions. Consider order effects, fatigue, and varying initial practice accuracy.
 
-Targets: ≥90% overall accuracy; ≥24 completed tracking updates/second; <100 ms median software frame-to-trail proxy on the documented reference laptop. Report actual values and variability even if targets are missed. Release-to-cast includes intentional 150 ms gating and is a different measure.
+Targets: ≥90% overall accuracy; ≥24 completed tracking updates/second; <100 ms median software frame-to-trail proxy on the documented reference laptop. Report actual values and variability even if targets are missed. Release-to-cast includes intentional 350 ms gating and is a different measure.
 
 ## Honest interpretation
 

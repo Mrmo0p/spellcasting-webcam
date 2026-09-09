@@ -17,8 +17,8 @@ Record browser version, OS, hardware, camera, lighting, distance, and result for
 - Test left and right hands, different hand sizes, and at least two distances.
 - Start with pointing already held: no stroke until stable release rearms.
 - Point for under 120 ms: no stroke. Sustain pointing: visible trail starts.
-- Release for under 150 ms then repoint: one continuous stroke. Stable release: exactly one result.
-- Hand leaves frame or changes hand midstroke: cancellation, no joined path.
+- Briefly curl the index for under 350 ms, then repoint: one continuous stroke. Hold the curl for 350 ms across at least three tracked frames: exactly one result.
+- A brief gap under 500 ms preserves the stroke. Sustained loss or reacquiring a distant hand cancels safely. Label flicker while turning the same hand does not cancel.
 - Draw all six runes at varied scales, positions, speeds, and both directions.
 - Start closed runes at different points. Try scribbles, short flicks, vertical lines, and tiny shapes; unwanted spells should be rejected.
 - Verify circle and spiral remain distinguishable in actual human drawings.
@@ -48,3 +48,10 @@ Record browser version, OS, hardware, camera, lighting, distance, and result for
 ## Optional WebMCP
 
 In a browser with document.modelContext, verify read_spellbound_session registration, empty-object success, invalid-input rejection, and read-only behavior. This live contract check is pending; ordinary browsers may not support the API.
+
+## Mid-stroke regression checks
+- Loosen the middle/ring/pinky fingers while tracing: drawing continues.
+- Trace slowly for 12 seconds: no eight-second cutoff.
+- Briefly obscure the hand, then return close to its prior position: the same stroke resumes.
+- Curl the index deliberately to finish; missing frames must not count toward the curl hold.
+- Export a study from the previous input version before starting fresh.
