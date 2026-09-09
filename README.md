@@ -64,3 +64,6 @@ The interface exposes an optional read-only WebMCP session-status tool on browse
 
 ### Guided first spell
 Choose **Start tutorial** in Practice for three camera-driven steps: curl to prepare, point and trace a circle, then curl to cast Ward. You can exit or replay it. Completion stays on this browser; tutorial strokes do not affect practice accuracy or study results. Failed casts explain recognition problems separately from spell cooldowns and combat requirements.
+
+### Phone comfort
+Use **Larger drawing view** to expand the arena and reduce surrounding information. Front/back camera buttons restart tracking; active duels pause until resumed. Both camera directions use the same mirrored preview and drawing coordinates. Framing hints estimate hand size and edge proximity; they do not measure lighting or recognition confidence. Rear cameras must be available on the device. Mobile performance remains experimental.
