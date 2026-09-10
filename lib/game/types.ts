@@ -1,4 +1,4 @@
-export type RuneId='ward'|'fireball'|'lightning'|'frost'|'mend'|'dispel';
+export type RuneId='ward'|'fireball'|'lightning'|'frost'|'mend'|'dispel'|'water';
 export type Point={x:number;y:number;t:number};
 export type Landmark={x:number;y:number;z:number};
 export type TrackingSample={t:number;landmarks:Landmark[];inferenceMs:number;frameStartedAt:number;receivedAt:number;handedness:string;aspect?:number};
@@ -6,5 +6,5 @@ export type Stroke={points:Point[];startedAt:number;releasedAt:number;endedAt:nu
 export type RecognitionResult={rune:RuneId|null;candidate:RuneId|null;score:number;distance:number;runnerUpDistance:number;reason:string|null;recognitionMs:number};
 export type SpellCommand={rune:RuneId;at:number};
 export type Accuracy=Record<RuneId,{attempts:number;correct:number}>;
-export const RUNE_IDS:RuneId[]=['ward','fireball','lightning','frost','mend','dispel'];
+export const RUNE_IDS:RuneId[]=['ward','fireball','lightning','frost','mend','dispel','water'];
 export function blankAccuracy():Accuracy{return Object.fromEntries(RUNE_IDS.map(id=>[id,{attempts:0,correct:0}])) as Accuracy;}

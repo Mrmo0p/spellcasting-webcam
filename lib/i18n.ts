@@ -1,6 +1,18 @@
 export type Locale='en'|'th';
 export const LANGUAGE_KEY='spellbound.language.v1';
 export const TH:Record<string,string>={
+ 'Water':'น้ำ','U shape':'รูปตัว U','Extinguish your burn':'ดับไฟที่กำลังเผาคุณ','Deal 8 damage and ignite a lasting burn':'สร้างความเสียหาย 8 และทำให้ติดไฟจนกว่าจะดับ',
+ 'Draw down, round the bottom, then go up to make a wide U. Keep the top open and the bottom curved.':'วาดลงมา โค้งที่ด้านล่างแล้วลากขึ้นเป็นตัว U กว้าง ๆ เว้นด้านบนให้เปิดและด้านล่างให้โค้ง',
+ 'Water recognized, but you are not burning. Save it to extinguish fire on yourself.':'ตรวจพบเวทน้ำ แต่คุณไม่ได้ติดไฟ เก็บไว้ใช้ดับไฟบนตัวคุณ','Not burning':'ไม่ได้ติดไฟ',
+ 'Fireball ignites the Archivist. Burn deals 4 damage each second.':'ลูกไฟทำให้ผู้พิทักษ์ติดไฟ เสียพลังชีวิต 4 ทุกวินาที','Water cast on yourself. Burn extinguished.':'ร่ายเวทน้ำใส่ตัวเอง ดับไฟแล้ว',
+ 'The Archivist casts Water on itself. Burn extinguished.':'ผู้พิทักษ์ร่ายเวทน้ำใส่ตัวเอง ดับไฟแล้ว','The Archivist takes 4 burn damage.':'ผู้พิทักษ์เสียพลังชีวิต 4 จากไฟเผา','You take 4 burn damage. Cast Water on yourself.':'คุณเสียพลังชีวิต 4 จากไฟเผา ร่ายเวทน้ำใส่ตัวเอง',
+ 'Ember volley hit for 18. You are burning — cast Water on yourself.':'ห่าลูกไฟสร้างความเสียหาย 18 คุณติดไฟ — ร่ายเวทน้ำใส่ตัวเอง',
+ 'CASTING WATER ON ITSELF':'กำลังร่ายเวทน้ำใส่ตัวเอง','The Archivist is extinguishing its burn':'ผู้พิทักษ์กำลังดับไฟบนตัวเอง',
+ 'You are burning: −4 health / second. Draw a U for Water.':'คุณติดไฟ: เสียพลังชีวิต 4 ต่อวินาที วาดตัว U เพื่อร่ายเวทน้ำ','You: not burning':'คุณ: ไม่ได้ติดไฟ','Opponent burning: −4 health / second':'คู่ต่อสู้ติดไฟ: เสียพลังชีวิต 4 ต่อวินาที','Opponent: not burning':'คู่ต่อสู้: ไม่ได้ติดไฟ',
+ '100 health. Seven spells. Keep your hand in view.':'พลังชีวิต 100 เวทเจ็ดแบบ ให้กล้องเห็นมืออยู่เสมอ','SEVEN RUNES. ONE HAND.':'รูนเจ็ดแบบ มือข้างเดียว',
+ 'You are ready to explore the other six runes or enter a duel.':'คุณพร้อมฝึกรูนอีกหกแบบหรือเข้าสู่สนามประลองแล้ว','14 practice strokes · 70 measured strokes · 2 duels':'ฝึก 14 ครั้ง · ทดสอบ 70 ครั้ง · ประลอง 2 รอบ',
+ 'GAME UPDATED':'อัปเดตเกมแล้ว','Start fresh with the new spellbook.':'เริ่มใหม่ด้วยคัมภีร์เวทฉบับใหม่',
+
  'Practice':'ฝึกวาด','Duel':'ประลอง','Study':'ทดสอบ','Game modes':'โหมดเกม','Language':'ภาษา',
  'THE WEBCAM GRIMOIRE':'คัมภีร์เวทผ่านกล้อง','YOUR HAND IS THE WAND':'มือของคุณคือไม้กายสิทธิ์',
  'Make your first mark.':'เริ่มวาดรูนแรกของคุณ','Point to draw. Curl your index finger to cast.':'ชี้นิ้วเพื่อวาด งอนิ้วชี้เพื่อร่ายเวท',
@@ -67,7 +79,7 @@ const patterns:[RegExp,(...parts:string[])=>string][]=[
  [/^(.+) example\. The dot marks one possible starting point\.$/,(_,n)=>`ตัวอย่าง${name(n)} จุดแสดงตำแหน่งเริ่มต้นแบบหนึ่ง`],
  [/^(\d+) of (\d+) prompted attempts correct \((\d+)%\)\.$/,(_,a,b,p)=>`ฝึกตามเป้าหมายถูกต้อง ${a} จาก ${b} ครั้ง (${p}%)`],
  [/^(.+)\. Trace the guide and curl your index finger to finish\.$/,(_,effect)=>`${name(effect)} วาดตามตัวอย่างแล้วงอนิ้วชี้เพื่อจบ`],
- [/^(\d+ \/ 06 · )(.+)$/,(_,prefix,n)=>prefix+name(n)],
+ [/^(\d+ \/ \d+ · )(.+)$/,(_,prefix,n)=>prefix+name(n)],
  [/^(ADAPTIVE|FIXED) DIFFICULTY$/,(_,n)=>n==='ADAPTIVE'?'ความยากปรับตามผู้เล่น':'ความยากคงที่'],
  [/^(\d+) Hz · (\d+) ms trail$/,(_,hz,ms)=>`${hz} Hz · เส้นวาด ${ms} ms`],
 ];

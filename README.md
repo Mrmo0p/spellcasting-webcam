@@ -1,6 +1,6 @@
 # Spellbound — Webcam Rune Duel
 
-A browser research prototype that turns index-finger air drawings into six spells. Built with React, TypeScript, Canvas, and MediaPipe Hand Landmarker. Hand inference runs in a dedicated worker. No frames are sent to a server.
+A browser research prototype that turns index-finger air drawings into seven spells. Built with React, TypeScript, Canvas, and MediaPipe Hand Landmarker. Hand inference runs in a dedicated worker. No frames are sent to a server.
 
 ## Run locally
 
@@ -33,7 +33,7 @@ On this Windows host Node 24 completed compilation but hit a native shutdown ass
 6. Select each spell card for prompted practice; the dotted guide is a tracing aid.
 7. Open **Duel**, show your hand, and choose fixed or adaptive difficulty.
 
-Circle → Ward; triangle → Fireball; zigzag → Lightning; V → Frost; spiral → Mend; horizontal line → Dispel. Strokes may be drawn in either direction. Circle and triangle accept different start points. Rotation tolerance is ±15°; full rotation invariance is intentionally disabled.
+Circle → Ward; triangle → Fireball; zigzag → Lightning; V → Frost; spiral → Mend; horizontal line → Dispel; rounded U → Water. Strokes may be drawn in either direction. Circle and triangle accept different start points. Rotation tolerance is ±15°; full rotation invariance is intentionally disabled.
 
 Space or Escape pauses an active duel. Resume uses the on-screen button after the hand returns. Camera loss or a hidden tab pauses combat automatically. The webcam is the only casting input.
 
@@ -43,7 +43,7 @@ Use the HTTPS hosted URL; localhost on the developer's computer is not a shareab
 
 ## Study mode
 
-The guided flow is 12 practice attempts, 60 measured attempts (10 per rune), two counterbalanced duels, then 1–5 ratings after each duel. Enter a sequential participant number and a device description; odd/even numbers reverse condition order. Export JSON and CSV before starting another session. Each browser retains only its current study and prompted-practice totals. See [study protocol](docs/STUDY_PROTOCOL.md).
+The guided flow is 14 practice attempts, 70 measured attempts (10 per rune), two counterbalanced duels, then 1–5 ratings after each duel. Enter a sequential participant number and a device description; odd/even numbers reverse condition order. Export JSON and CSV before starting another session. Each browser retains only its current study and prompted-practice totals. See [study protocol](docs/STUDY_PROTOCOL.md).
 
 ## Implementation
 
@@ -70,3 +70,8 @@ Use **Larger drawing view** to expand the arena and reduce surrounding informati
 
 ### English and Thai
 Use the English / ไทย buttons above the play area to change language at any time. The choice stays in this browser and does not reset the camera, practice progress, or duel. Thai covers navigation, rune coaching, tutorial steps, camera guidance, combat feedback, and study screens. Study exports retain canonical English field names and rune IDs for consistent analysis.
+
+## Fire and Water
+Fireball deals 8 direct damage and ignites the opponent. Burn deals 4 damage every second until Water is cast on the burning character; repeated fire does not stack burn or reset its timer. The Archivist spends 3 seconds casting Water on itself, pausing its normal phase timer, then waits a 6-second Water cooldown. Its Ember volley also ignites you unless blocked by Ward. Draw a rounded U to cast Water on yourself (4-second cooldown). Water extinguishes without healing; Mend heals without extinguishing. A barrier halves direct damage but not burn damage.
+
+Old six-rune studies remain available for export; start a new study for the seven-rune rules. Existing practice totals are preserved and Water starts with zero attempts.

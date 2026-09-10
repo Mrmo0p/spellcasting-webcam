@@ -19,7 +19,7 @@ Record browser version, OS, hardware, camera, lighting, distance, and result for
 - Point for under 120 ms: no stroke. Sustain pointing: visible trail starts.
 - Briefly curl the index for under 350 ms, then repoint: one continuous stroke. Hold the curl for 350 ms across at least three tracked frames: exactly one result.
 - A brief gap under 500 ms preserves the stroke. Sustained loss or reacquiring a distant hand cancels safely. Label flicker while turning the same hand does not cancel.
-- Draw all six runes at varied scales, positions, speeds, and both directions.
+- Draw all seven runes at varied scales, positions, speeds, and both directions.
 - Start closed runes at different points. Try scribbles, short flicks, vertical lines, and tiny shapes; unwanted spells should be rejected.
 - Verify circle and spiral remain distinguishable in actual human drawings.
 - Poor lighting or occlusion: recover safely instead of pretending accuracy.
@@ -36,7 +36,7 @@ Record browser version, OS, hardware, camera, lighting, distance, and result for
 
 ## Study and accessibility
 
-- Finish 12 practice + 60 measured prompts; each rune appears 10 times measured.
+- Finish 14 practice + 70 measured prompts; each rune appears 10 times measured.
 - Reject an active trial: it remains in the denominator and confusion matrix.
 - Confirm odd/even sequence changes condition order.
 - Complete or abort both duels; enter ratings; download valid JSON and CSV.
@@ -79,3 +79,10 @@ In a browser with document.modelContext, verify read_spellbound_session registra
 - Check denied camera access, recovery guidance, wrong rune, cooldown, enemy attack, rating and results messages in Thai.
 - Check Thai text wrapping on a narrow phone and in landscape, including the language switch and camera controls.
 - Confirm typed device names and downloaded CSV/JSON data are not translated.
+
+## Fire / Water
+- Cast Fireball: expect 8 initial damage, then 4 each second until the opponent finishes its visible three-second Water spell. Its attack timer should freeze only during that Water preparation.
+- Let Ember volley land: the player burns until drawing Water (rounded U). Confirm Water ends the burn without restoring health. Test U versus V at different speeds and sizes.
+- Reignite during the opponent’s Water cooldown; damage continues until it can cast Water again. Repeated fire must not stack or restart its preparation.
+- Pause, hide the tab, or lose the camera while burning: health, burn and Water timers must freeze.
+- Check burn labels, new rune, camera practice, and study counts in English and Thai. Confirm older studies remain exportable and require a fresh session.

@@ -26,11 +26,11 @@ Nearly straight strokes cannot match nonlinear templates. A match must have mean
 
 Both sides start with 100 health. Authored phases: telegraph (4 seconds fixed), recovery (2.2 seconds fixed), defense (1.6 seconds). Attack cycle: Ember volley (18), Charged nova (25), Glacial lance (20). Defense halves direct damage.
 
-Ward blocks one hit (9-second cooldown); Fireball deals 28 (4.5 seconds); Lightning deals 16 (2.2 seconds); Frost adds 3 seconds (8 seconds); Mend restores up to 22 (14 seconds); Dispel cancels an incoming attack (9 seconds). Failed contextual casts do not spend cooldowns.
+Ward blocks one hit (9-second cooldown); Fireball deals 8 and applies a 4-per-second burn (4.5 seconds); Lightning deals 16 (2.2 seconds); Frost adds 3 seconds (8 seconds); Mend restores up to 22 (14 seconds); Dispel cancels an incoming attack (9 seconds); Water extinguishes the player without healing (4 seconds). Failed contextual casts do not spend cooldowns.
 
 Adaptive warning = 4 seconds + 2.5 seconds × error rate for the indicated counter rune. Unobserved runes use the fixed window. Adaptive recovery adds up to 2.5 seconds from aggregate Fireball, Lightning, and Mend practice errors. Fixed sessions always use base timings. Duel recognition never updates inferred intent or accuracy.
 
-Combat advances using elapsed deltas, with no wall-clock dependency in the engine. Pauses freeze cooldowns and attacks. Hidden tabs, long animation gaps, or more than 1.2 seconds without a visible hand pause combat. Resuming requires explicit action and a visible hand.
+Combat advances using elapsed deltas, with no wall-clock dependency in the engine. Pauses freeze cooldowns, attacks, burn ticks and Water preparation. Hidden tabs, long animation gaps, or more than 1.2 seconds without a visible hand pause combat. Resuming requires explicit action and a visible hand.
 
 ## Persistence and interfaces
 
@@ -50,3 +50,8 @@ Input version continuous-stroke-v2 is included in study metadata and CSV. Older 
 
 ## Interface languages
 `lib/i18n.ts` contains English-to-Thai presentation strings and full-message patterns for dynamic feedback. `localizeTree` translates rendered text and accessibility labels only, preserving refs, callbacks, form values, and game identifiers. Home and RuneCoach apply this boundary explicitly. New text-producing components must apply the boundary or call `translate` directly. The local language preference uses `spellbound.language.v1`; the document language follows the selection. No remote translation service is used.
+
+### Burn and Water timing
+The engine advances to event boundaries, rather than subtracting a whole frame before resolving damage. Burn has no natural expiry and does not stack or refresh. The Archivist starts a 3-second self-Water cast when burning and its 6-second Water cooldown is ready. Its normal phase timer pauses during that cast. Re-ignition during cooldown must wait for the next Water cast. Water cannot be interrupted by Frost/Dispel, which target incoming damaging attacks. At simultaneous timestamps burn ticks resolve before Water completes; lethal damage ends the duel immediately. Ward blocks new Ember ignition but does not remove an existing burn.
+
+Study records identify `burn-water-v1` and `templates-v2-water-pilot`. Older studies are retained for export and cannot continue with these changed rules. New trials derive their counts from seven runes (14 practice, 70 measured).

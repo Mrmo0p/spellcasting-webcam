@@ -23,6 +23,7 @@ export function blockedSpellHint(rune:RuneId,reason:string|null,remainingMs=0):s
  const name=runeById(rune).name;
  switch(reason){
   case 'cooldown':return `${name} recognized, but still cooling down. Wait about ${Math.max(1,Math.ceil(remainingMs/1000))} seconds, then draw it again.`;
+  case 'not-burning':return 'Water recognized, but you are not burning. Save it to extinguish fire on yourself.';
   case 'health-full':return 'Mend recognized, but your health is full. Try Fireball or Lightning to attack.';
   case 'ward-active':return 'Ward recognized, but your shield is already active. Try an attack while it protects you.';
   case 'no-incoming-attack':return `${name} recognized. Save it for an incoming attack warning; try Fireball or Lightning now.`;

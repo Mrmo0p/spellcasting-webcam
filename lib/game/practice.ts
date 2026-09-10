@@ -1,6 +1,7 @@
 import {RUNE_IDS,type Accuracy,type RuneId} from './types.ts';
 
 export const DRAWING_TIPS:Record<RuneId,string>={
+ water:'Draw down, round the bottom, then go up to make a wide U. Keep the top open and the bottom curved.',
  ward:'Make one round loop and return to where you started. Leave the center empty.',
  fireball:'Draw three straight sides with three clear corners, then close the triangle.',
  lightning:'Draw a tall zigzag with two sharp bends. Keep its top and bottom well apart.',

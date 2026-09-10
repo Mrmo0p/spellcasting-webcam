@@ -13,8 +13,8 @@
 - Explain local processing, voluntary participation, local result storage, and manual export. Do not request real names in the app.
 - Enter a sequential participant number and test-device description. Use unique sequence numbers across participants, including friends testing separate phones.
 - Match camera placement and normal lighting; note hand used, approximate camera distance, prior gesture-game experience, and environmental variations in separate researcher notes.
-- Complete 12 practice prompts, two per rune. These labels alone set adaptive difficulty.
-- Complete 60 randomized measured prompts, 10 per rune. A 1.2-second feedback gap separates attempts. Dotted guides are absent in measured trials; a small rune reference remains visible.
+- Complete 14 practice prompts, two per rune. These labels alone set adaptive difficulty.
+- Complete 70 randomized measured prompts, 10 per rune. A 1.2-second feedback gap separates attempts. Dotted guides are absent in measured trials; a small rune reference remains visible.
 - Test both fixed and adaptive duels. Odd participants start adaptive; even participants start fixed. Do not change recognition settings between conditions.
 - After each duel rate enjoyment, responsiveness, and fatigue from 1 (low) to 5 (high).
 - Export JSON and CSV before starting another session. Send files only through a separately agreed research collection method.
@@ -32,3 +32,5 @@ Targets: ≥90% overall accuracy; ≥24 completed tracking updates/second; <100 
 Synthetic unit tests establish algorithmic behavior, not real-world accuracy. A geometric similarity score is not confidence probability. Current telemetry cannot isolate exposure, display refresh, or physical finger-to-screen delay; high-speed video would be needed for end-to-end measurement. Mobile results are exploratory and must be reported separately from desktop results.
 
 Interface language: offer English or Thai before testing, record the chosen language in the investigator notes, and keep it consistent within each participant session. UI language changes do not alter thresholds or exported rune IDs. Thai-language comprehension and its effect on outcomes still require participant evaluation.
+
+The seven-rune Fire/Water version uses 14 practice and 70 measured attempts. Do not combine its recognition or combat outcomes with older six-rune sessions without accounting for the changed rules; exported records include combat and recognizer versions. Water uses a rounded U, distinct from Frost’s sharp V.

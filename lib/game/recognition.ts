@@ -1,7 +1,7 @@
 import type {Point,RecognitionResult,Stroke} from './types.ts';
 import {RUNES} from './runes.ts';
 import {INPUT_TIMING} from './gating.ts';
-export const RECOGNIZER_VERSION='templates-v1-pilot';
+export const RECOGNIZER_VERSION='templates-v2-water-pilot';
 export const THRESHOLDS={maxDistance:.18,minMargin:.035,minLength:.12,minExtent:.06,maxDuration:INPUT_TIMING.maxStroke};
 export const distance=(a:Point,b:Point)=>Math.hypot(a.x-b.x,a.y-b.y);
 export const pathLength=(p:Point[])=>p.slice(1).reduce((s,v,i)=>s+distance(p[i],v),0);
