@@ -1,6 +1,8 @@
 export type Locale='en'|'th';
 export const LANGUAGE_KEY='spellbound.language.v1';
 export const TH:Record<string,string>={
+ 'Duel summary':'สรุปการประลอง','Burn damage dealt':'ความเสียหายไฟที่สร้าง','Burn damage taken':'ความเสียหายไฟที่ได้รับ','Your extinguishes':'ครั้งที่คุณดับไฟ','Opponent extinguishes':'ครั้งที่คู่ต่อสู้ดับไฟ','Burn damage excludes the initial fire hit.':'ความเสียหายไฟนี้ไม่รวมความเสียหายตอนลูกไฟโดนครั้งแรก',
+
  'Learn Fire → Water':'เรียนรู้ไฟ → น้ำ','Fire and Water lesson':'บทเรียนไฟและน้ำ','FIRE → WATER LESSON':'บทเรียนไฟ → น้ำ','1. Draw Fireball':'1. วาดรูนลูกไฟ','2. Extinguish a practice burn':'2. ฝึกดับไฟบนตัวเอง','Fire and Water mastered':'เรียนรู้ไฟและน้ำสำเร็จ',
  'Draw a triangle and curl your index finger. In a duel, Fireball ignites your opponent until they cast Water.':'วาดสามเหลี่ยมแล้วงอนิ้วชี้ ในการประลอง ลูกไฟทำให้คู่ต่อสู้ติดไฟจนกว่าจะร่ายเวทน้ำ',
  'Imagine you were hit by fire. Draw a rounded U and curl your index finger to cast Water on yourself.':'สมมติว่าคุณถูกไฟโจมตี วาดตัว U ที่โค้งมนแล้วงอนิ้วชี้เพื่อร่ายเวทน้ำใส่ตัวเอง',
