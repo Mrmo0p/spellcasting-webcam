@@ -75,3 +75,5 @@ Use the English / ไทย buttons above the play area to change language at an
 Fireball deals 8 direct damage and ignites the opponent. Burn deals 4 damage every second until Water is cast on the burning character; repeated fire does not stack burn or reset its timer. The Archivist spends 3 seconds casting Water on itself, pausing its normal phase timer, then waits a 6-second Water cooldown. Its Ember volley also ignites you unless blocked by Ward. Draw a rounded U to cast Water on yourself (4-second cooldown). Water extinguishes without healing; Mend heals without extinguishing. A barrier halves direct damage but not burn damage.
 
 Old six-rune studies remain available for export; start a new study for the seven-rune rules. Existing practice totals are preserved and Water starts with zero attempts.
+
+Choose **Learn Fire → Water** in Practice for a two-rune lesson without health loss or scored attempts. During duels, a prominent burn warning shows the Water rune and self-extinguish instruction.

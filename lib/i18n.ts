@@ -1,6 +1,16 @@
 export type Locale='en'|'th';
 export const LANGUAGE_KEY='spellbound.language.v1';
 export const TH:Record<string,string>={
+ 'Learn Fire → Water':'เรียนรู้ไฟ → น้ำ','Fire and Water lesson':'บทเรียนไฟและน้ำ','FIRE → WATER LESSON':'บทเรียนไฟ → น้ำ','1. Draw Fireball':'1. วาดรูนลูกไฟ','2. Extinguish a practice burn':'2. ฝึกดับไฟบนตัวเอง','Fire and Water mastered':'เรียนรู้ไฟและน้ำสำเร็จ',
+ 'Draw a triangle and curl your index finger. In a duel, Fireball ignites your opponent until they cast Water.':'วาดสามเหลี่ยมแล้วงอนิ้วชี้ ในการประลอง ลูกไฟทำให้คู่ต่อสู้ติดไฟจนกว่าจะร่ายเวทน้ำ',
+ 'Imagine you were hit by fire. Draw a rounded U and curl your index finger to cast Water on yourself.':'สมมติว่าคุณถูกไฟโจมตี วาดตัว U ที่โค้งมนแล้วงอนิ้วชี้เพื่อร่ายเวทน้ำใส่ตัวเอง',
+ 'You learned both runes. Fire burns over time; Water extinguishes without healing.':'คุณเรียนรู้รูนทั้งสองแล้ว ไฟสร้างความเสียหายต่อเนื่อง ส่วนน้ำดับไฟโดยไม่ฟื้นฟูพลังชีวิต',
+ 'No health is lost here. These attempts do not affect practice scores or study results.':'บทเรียนนี้ไม่เสียพลังชีวิต และไม่กระทบคะแนนฝึกหรือผลทดสอบ',
+ 'Fireball recognized. Fire causes a lasting burn. Now practice Water on yourself.':'ตรวจพบลูกไฟ ไฟจะเผาต่อเนื่อง ต่อไปฝึกร่ายเวทน้ำใส่ตัวเอง',
+ 'Water recognized. Practice burn extinguished — lesson complete!':'ตรวจพบเวทน้ำ ดับไฟในการฝึกแล้ว — จบบทเรียน!',
+ 'For this step, draw a triangle for Fireball.':'ขั้นตอนนี้ ให้วาดสามเหลี่ยมเพื่อร่ายลูกไฟ','For this step, draw a rounded U for Water.':'ขั้นตอนนี้ ให้วาดตัว U ที่โค้งมนเพื่อร่ายเวทน้ำ',
+ 'YOU ARE BURNING':'คุณกำลังติดไฟ','Draw a rounded U → cast Water on yourself.':'วาดตัว U โค้งมน → ร่ายเวทน้ำใส่ตัวเอง','Water stops the burn. Mend only restores health.':'น้ำช่วยดับไฟ ส่วนเวทฟื้นฟูเพิ่มพลังชีวิตเท่านั้น',
+
  'Water':'น้ำ','U shape':'รูปตัว U','Extinguish your burn':'ดับไฟที่กำลังเผาคุณ','Deal 8 damage and ignite a lasting burn':'สร้างความเสียหาย 8 และทำให้ติดไฟจนกว่าจะดับ',
  'Draw down, round the bottom, then go up to make a wide U. Keep the top open and the bottom curved.':'วาดลงมา โค้งที่ด้านล่างแล้วลากขึ้นเป็นตัว U กว้าง ๆ เว้นด้านบนให้เปิดและด้านล่างให้โค้ง',
  'Water recognized, but you are not burning. Save it to extinguish fire on yourself.':'ตรวจพบเวทน้ำ แต่คุณไม่ได้ติดไฟ เก็บไว้ใช้ดับไฟบนตัวคุณ','Not burning':'ไม่ได้ติดไฟ',

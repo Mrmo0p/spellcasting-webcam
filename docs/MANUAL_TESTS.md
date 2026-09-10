@@ -86,3 +86,8 @@ In a browser with document.modelContext, verify read_spellbound_session registra
 - Reignite during the opponent’s Water cooldown; damage continues until it can cast Water again. Repeated fire must not stack or restart its preparation.
 - Pause, hide the tab, or lose the camera while burning: health, burn and Water timers must freeze.
 - Check burn labels, new rune, camera practice, and study counts in English and Thai. Confirm older studies remain exportable and require a fresh session.
+
+## Fire → Water lesson and burn warning
+- In Practice select Learn Fire → Water. Only a recognized triangle should advance to Water; only a recognized rounded U should finish. Rejected and other runes must keep the current step.
+- Confirm no health, practice accuracy or study trials change during the lesson. Exit or switch modes at either step, then restart.
+- Get burned in a duel: the prominent Water instruction and rune must appear below the drawing area. Extinguish, pause or end the duel: the warning must disappear. Check English, Thai and phone layouts.
