@@ -67,3 +67,8 @@ In a browser with document.modelContext, verify read_spellbound_session registra
 - Switch during a stroke and during a duel: no partial spell should cast, the duel should pause, and Resume should require a tracked hand.
 - Try the larger view in portrait and landscape. Confirm camera preview, rune selection, pause/resume and exit controls remain usable.
 - Move near frame edges, closer and farther away; hints should settle after 700 ms and not claim to measure lighting.
+
+## Practice coaching
+- Play each rune demonstration, replay it, and change rune. Verify its starting dot and shape instructions. With reduced motion enabled, the complete path should remain visible.
+- Verify the next-rune suggestion uses prompted practice results, excluding tutorials and duels. Switching to the suggestion clears any unfinished stroke.
+- Confirm coaching appears only in free practice, is absent from study trials, and is hidden in the larger drawing view.
