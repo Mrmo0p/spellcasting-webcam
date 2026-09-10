@@ -1,0 +1,4 @@
+import type {CombatState} from '@/lib/game/combat';
+export function Opponent({combat,paused}:{combat:CombatState;paused:boolean}){
+ return <div className={'opponent-figure '+combat.phase+(paused||combat.outcome?' still':'')} aria-hidden="true"><svg viewBox="0 0 160 160"><ellipse className="mage-shadow" cx="80" cy="146" rx="46" ry="8"/><g className="mage-body"><path className="mage-robe" d="M80 27Q53 37 51 75L34 139Q80 153 126 139L109 75Q108 39 80 27Z"/><path className="mage-hood" d="M80 31L57 76Q80 63 103 76Z"/><path className="mage-eyes" d="M68 65h7m10 0h7"/><path className="mage-trim" d="M80 84v57M54 93l-15 23m67-23 15 23"/><circle className="mage-orb" cx="125" cy="87" r="11"/><path className="mage-staff" d="M125 100v43"/></g><ellipse className="mage-barrier" cx="80" cy="88" rx="65" ry="66"/></svg></div>;
+}
