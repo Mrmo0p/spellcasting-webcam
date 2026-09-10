@@ -47,3 +47,6 @@ Release-to-cast: first clearly curled-index sample to recognition/dispatch, incl
 Study rows snapshot the current rolling tracking metrics at trial completion. Device hardware must be recorded by the researcher.
 
 Input version continuous-stroke-v2 is included in study metadata and CSV. Older saved studies remain exportable, but cannot continue under changed input rules; the UI offers a fresh session.
+
+## Interface languages
+`lib/i18n.ts` contains English-to-Thai presentation strings and full-message patterns for dynamic feedback. `localizeTree` translates rendered text and accessibility labels only, preserving refs, callbacks, form values, and game identifiers. Home and RuneCoach apply this boundary explicitly. New text-producing components must apply the boundary or call `translate` directly. The local language preference uses `spellbound.language.v1`; the document language follows the selection. No remote translation service is used.

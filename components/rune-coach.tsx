@@ -1,15 +1,17 @@
 'use client';
+import {localizeTree} from '@/lib/localize-tree';
+import type {Locale} from '@/lib/i18n';
 import {useState} from 'react';
 import {Button} from '@/components/ui/button';
 import {runeById} from '@/lib/game/runes';
 import {DRAWING_TIPS,recommendPractice} from '@/lib/game/practice';
 import type {Accuracy,RuneId} from '@/lib/game/types';
 
-export function RuneCoach({runeId,accuracy,onSelect}:{runeId:RuneId;accuracy:Accuracy;onSelect:(id:RuneId)=>void}){
+export function RuneCoach({locale,runeId,accuracy,onSelect}:{locale:Locale;runeId:RuneId;accuracy:Accuracy;onSelect:(id:RuneId)=>void}){
  const [replay,setReplay]=useState(0);
  const rune=runeById(runeId),record=accuracy[runeId],suggested=recommendPractice(accuracy);
  const points=rune.points.map(p=>`${p.x*100},${p.y*100}`).join(' '),start=rune.points[0];
- return <section className="rune-coach" aria-label="Rune drawing guide">
+ return localizeTree(<section className="rune-coach" aria-label="Rune drawing guide">
   <div className="rune-demo" style={{color:rune.color}}>
    <svg key={runeId+':'+replay} viewBox="0 0 100 100" role="img" aria-label={`${rune.shape} example. The dot marks one possible starting point.`}>
     <polyline points={points} className="demo-reference"/>
@@ -22,5 +24,5 @@ export function RuneCoach({runeId,accuracy,onSelect}:{runeId:RuneId;accuracy:Acc
    <div className="row"><Button variant="outline" onClick={()=>setReplay(n=>n+1)}>Watch the stroke</Button><Button variant="outline" onClick={()=>{setReplay(0);onSelect(suggested);}}>Practice {runeById(suggested).name} next</Button></div>
    <small className="suggestion-note">Next-rune suggestions use your practice results on this device.</small>
   </div>
- </section>;
+ </section>,locale);
 }

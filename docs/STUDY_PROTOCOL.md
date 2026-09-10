@@ -30,3 +30,5 @@ Targets: ≥90% overall accuracy; ≥24 completed tracking updates/second; <100 
 ## Honest interpretation
 
 Synthetic unit tests establish algorithmic behavior, not real-world accuracy. A geometric similarity score is not confidence probability. Current telemetry cannot isolate exposure, display refresh, or physical finger-to-screen delay; high-speed video would be needed for end-to-end measurement. Mobile results are exploratory and must be reported separately from desktop results.
+
+Interface language: offer English or Thai before testing, record the chosen language in the investigator notes, and keep it consistent within each participant session. UI language changes do not alter thresholds or exported rune IDs. Thai-language comprehension and its effect on outcomes still require participant evaluation.

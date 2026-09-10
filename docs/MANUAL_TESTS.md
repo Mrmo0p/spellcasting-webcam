@@ -72,3 +72,10 @@ In a browser with document.modelContext, verify read_spellbound_session registra
 - Play each rune demonstration, replay it, and change rune. Verify its starting dot and shape instructions. With reduced motion enabled, the complete path should remain visible.
 - Verify the next-rune suggestion uses prompted practice results, excluding tutorials and duels. Switching to the suggestion clears any unfinished stroke.
 - Confirm coaching appears only in free practice, is absent from study trials, and is hidden in the larger drawing view.
+
+## English / Thai
+- Switch languages before enabling the camera, during practice, mid-duel and in the larger drawing view. Confirm no loss of camera stream, current stroke, health or scores.
+- Refresh with Thai selected; it should be restored. Switch back to English. Verify labels, headings, rune hints and accessibility names in each language.
+- Check denied camera access, recovery guidance, wrong rune, cooldown, enemy attack, rating and results messages in Thai.
+- Check Thai text wrapping on a narrow phone and in landscape, including the language switch and camera controls.
+- Confirm typed device names and downloaded CSV/JSON data are not translated.

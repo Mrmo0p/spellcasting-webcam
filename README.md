@@ -67,3 +67,6 @@ Choose **Start tutorial** in Practice for three camera-driven steps: curl to pre
 
 ### Phone comfort
 Use **Larger drawing view** to expand the arena and reduce surrounding information. Front/back camera buttons restart tracking; active duels pause until resumed. Both camera directions use the same mirrored preview and drawing coordinates. Framing hints estimate hand size and edge proximity; they do not measure lighting or recognition confidence. Rear cameras must be available on the device. Mobile performance remains experimental.
+
+### English and Thai
+Use the English / ไทย buttons above the play area to change language at any time. The choice stays in this browser and does not reset the camera, practice progress, or duel. Thai covers navigation, rune coaching, tutorial steps, camera guidance, combat feedback, and study screens. Study exports retain canonical English field names and rune IDs for consistent analysis.
