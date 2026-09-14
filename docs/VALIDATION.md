@@ -2,7 +2,7 @@
 
 Automated validation is recorded at implementation time below. Physical webcam/phone and participant tests remain pending.
 
-- Automated tests: 72 passing (including 9 PvP engine/protocol checks, PvP localization, 10 mid-stroke regressions, tutorial/feedback, burn/Water/migration, gesture/combat/study, and worker checks). These do not use a physical hand or camera.
+- Automated tests: 77 passing (including Star recognition/stun, PvP engine/protocol checks, PvP localization, 10 mid-stroke regressions, tutorial/feedback, burn/Water/migration, gesture/combat/study, and worker checks). These do not use a physical hand or camera.
 - TypeScript checks: passed.
 - Dependency audit: zero reported vulnerabilities after patched dependency updates and a sharp override for the build tools.
 - Production static build: passed on Windows with Node 22.15.1 and preserve-symlinks flags. Node 24 on this host hit a native shutdown assertion after compilation. Linux CI is configured but cannot be claimed to have run before a GitHub push.

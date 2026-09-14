@@ -8,6 +8,7 @@ export const DRAWING_TIPS:Record<RuneId,string>={
  frost:'Draw down to one sharp point, then back up. Leave the top open.',
  mend:'Start near the center and spiral outward for almost two turns. Keep space between the coils.',
  dispel:'Draw one straight line from side to side. Keep it roughly level.',
+ star:'Draw one continuous five-point star. Cross through the center and return to the top point.',
 };
 
 // Recommendations use known practice targets only. Free-play guesses are never evidence of intent.

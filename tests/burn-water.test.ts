@@ -66,14 +66,14 @@ test('Water preparation cannot be countered as an incoming damaging attack',()=>
  const state=castSpell(base(),{rune:'fireball',at:0}).state;
  for(const rune of ['frost','dispel'] as const){assert.equal(castSpell(state,{rune,at:0}).reason,'no-incoming-attack');assert.equal(spellAvailability(state,rune),'Needs incoming attack');}
 });
-test('older six-rune progress remains exportable and new studies have seven runes',()=>{
+test('older spellbooks remain exportable and new studies have eight runes',()=>{
  const descriptor=Object.getOwnPropertyDescriptor(globalThis,'localStorage');const values=new Map<string,string>();
  Object.defineProperty(globalThis,'localStorage',{configurable:true,value:{getItem:(k:string)=>values.get(k)??null,setItem:(k:string,v:string)=>values.set(k,v)}});
  try{
-  const {water,...oldAccuracy}=blankAccuracy();oldAccuracy.ward={attempts:7,correct:4};values.set('spellbound.accuracy.v1',JSON.stringify(oldAccuracy));
-  const migrated=loadAccuracy();assert.deepEqual(migrated.ward,oldAccuracy.ward);assert.deepEqual(migrated.water,{attempts:0,correct:0});
-  const s=createStudy(1,'test','test');assert.equal(s.combatVersion,COMBAT_VERSION);assert.equal(s.practiceOrder.length,14);assert.equal(s.order.length,70);assert.equal(isCurrentStudy(s),true);
-  values.set('spellbound.study.v1',JSON.stringify({...s,recognizerVersion:'templates-v1-pilot',combatVersion:undefined,accuracy:oldAccuracy,practiceOrder:s.practiceOrder.filter(r=>r!=='water'),order:s.order.filter(r=>r!=='water')}));
+  const {water:_water,star:_star,...oldAccuracy}=blankAccuracy();oldAccuracy.ward={attempts:7,correct:4};values.set('spellbound.accuracy.v1',JSON.stringify(oldAccuracy));
+  const migrated=loadAccuracy();assert.deepEqual(migrated.ward,oldAccuracy.ward);assert.deepEqual(migrated.water,{attempts:0,correct:0});assert.deepEqual(migrated.star,{attempts:0,correct:0});
+  const s=createStudy(1,'test','test');assert.equal(s.combatVersion,COMBAT_VERSION);assert.equal(s.practiceOrder.length,16);assert.equal(s.order.length,80);assert.equal(isCurrentStudy(s),true);
+  values.set('spellbound.study.v1',JSON.stringify({...s,recognizerVersion:'templates-v1-pilot',combatVersion:undefined,accuracy:oldAccuracy,practiceOrder:s.practiceOrder.filter(r=>r!=='water'&&r!=='star'),order:s.order.filter(r=>r!=='water'&&r!=='star')}));
   const previous=loadStudy();assert.ok(previous);assert.equal(previous.id,s.id);assert.equal(previous.order.length,60);assert.equal(isCurrentStudy(previous),false);assert.deepEqual(previous.accuracy.ward,oldAccuracy.ward);
  }finally{if(descriptor)Object.defineProperty(globalThis,'localStorage',descriptor);else Reflect.deleteProperty(globalThis,'localStorage');}
 });

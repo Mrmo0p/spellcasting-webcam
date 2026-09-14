@@ -6,7 +6,7 @@ export type PvpOutcome=PvpSlot|'draw'|null;
 export type PvpConnectionStatus='idle'|'connecting'|'open'|'reconnecting'|'closed'|'error';
 
 export type PvpPlayerState={
- slot:PvpSlot;name:string;health:number;shield:boolean;burning:boolean;nextBurnAt:number|null;
+ slot:PvpSlot;name:string;health:number;shield:boolean;burning:boolean;nextBurnAt:number|null;stunnedUntil:number|null;
  cooldowns:Partial<Record<RuneId,number>>;ready:boolean;connected:boolean;reconnectUsed:boolean;rematch:boolean;
 };
 

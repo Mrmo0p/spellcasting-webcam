@@ -30,6 +30,8 @@ test('Thai translates dynamic messages while retaining numbers and spell meaning
 test('Thai covers the PvP lobby, match state and dynamic player events',()=>{
  for(const text of ['PRIVATE ONLINE DUEL','Create room','Join room','INCOMING SPELL','Request rematch','Camera is off. The duel continues.'])assert.notEqual(translate(text,'th'),text);
  assert.equal(translate('Mali cast fireball.','th'),'Mali ร่ายลูกไฟ');
+ assert.equal(translate('Mali cast star.','th'),'Mali ร่ายดาว');
+ assert.match(translate('You are stunned — 2.5s','th'),/2.5/);
  assert.equal(translate('12 seconds remaining','th'),'เหลือ 12 วินาที');
  assert.equal(translate('Niran wins.','th'),'Niran ชนะ');
 });

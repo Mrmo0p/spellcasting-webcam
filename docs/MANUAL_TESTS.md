@@ -19,7 +19,7 @@ Record browser version, OS, hardware, camera, lighting, distance, and result for
 - Point for under 120 ms: no stroke. Sustain pointing: visible trail starts.
 - Briefly curl the index for under 350 ms, then repoint: one continuous stroke. Hold the curl for 350 ms across at least three tracked frames: exactly one result.
 - A brief gap under 500 ms preserves the stroke. Sustained loss or reacquiring a distant hand cancels safely. Label flicker while turning the same hand does not cancel.
-- Draw all seven runes at varied scales, positions, speeds, and both directions.
+- Draw all eight runes at varied scales, positions, speeds, and both directions.
 - Start closed runes at different points. Try scribbles, short flicks, vertical lines, and tiny shapes; unwanted spells should be rejected.
 - Verify circle and spiral remain distinguishable in actual human drawings.
 - Poor lighting or occlusion: recover safely instead of pretending accuracy.
@@ -39,7 +39,7 @@ Record browser version, OS, hardware, camera, lighting, distance, and result for
 - Start the web app and PvP Worker, then create a room in one browser and join it from another using the room code or invite link.
 - Verify invalid names/codes, a third player, and an unknown room fail without exposing tokens.
 - Confirm Ready requires a tracked hand, both players see the same three-second countdown, and attacks show the same server deadline.
-- Exercise all seven runes, simultaneous lethal attacks, burn/Water, Ward, Frost, Dispel, cooldown rejection, draw, rematch consensus, and leaving.
+- Exercise all eight runes, including Star stun rejection and recovery, simultaneous lethal attacks, burn/Water, Ward, Frost, Dispel, cooldown rejection, draw, rematch consensus, and leaving.
 - Reload once during combat and reconnect within 30 seconds; verify deadlines resume shifted. Disconnect again and verify the five-second forfeit.
 - Hide a tab or lose only hand tracking: the network match must continue. Disconnect the WebSocket: the match must pause.
 - Inspect WebSocket payloads and confirm no frames, landmarks, or drawing paths are transmitted.
@@ -47,7 +47,7 @@ Record browser version, OS, hardware, camera, lighting, distance, and result for
 
 ## Study and accessibility
 
-- Finish 14 practice + 70 measured prompts; each rune appears 10 times measured.
+- Finish 16 practice + 80 measured prompts; each rune appears 10 times measured.
 - Reject an active trial: it remains in the denominator and confusion matrix.
 - Confirm odd/even sequence changes condition order.
 - Complete or abort both duels; enter ratings; download valid JSON and CSV.

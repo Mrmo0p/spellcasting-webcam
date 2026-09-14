@@ -13,6 +13,7 @@ export function paintCast(c:CanvasRenderingContext2D,w:number,h:number,e:CastEff
   case 'frost':{for(let i=0;i<6;i++){c.save();c.rotate(i*Math.PI/3);c.beginPath();c.moveTo(0,0);c.lineTo(0,-size);c.moveTo(-size*.25,-size*.55);c.lineTo(0,-size*.8);c.lineTo(size*.25,-size*.55);c.stroke();c.restore();}break;}
   case 'mend':{c.translate(0,-t*size*.6);c.beginPath();c.moveTo(-size*.45,0);c.lineTo(size*.45,0);c.moveTo(0,-size*.45);c.lineTo(0,size*.45);c.stroke();circle(size*(.7+t*.4));break;}
   case 'dispel':{c.setLineDash([size*.3,size*.16]);circle(size*(.4+t));c.beginPath();c.moveTo(-size,0);c.lineTo(size,0);c.stroke();break;}
+  case 'star':{c.rotate(t*Math.PI);for(let i=0;i<5;i++){c.rotate(Math.PI*2/5);c.beginPath();c.moveTo(0,-size*.35);c.lineTo(0,-size*(.85+t*.25));c.stroke();}circle(size*(.45+t*.35));break;}
   default:circle(size*(.4+t));
  }
  c.restore();

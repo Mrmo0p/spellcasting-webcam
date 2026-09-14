@@ -1,6 +1,6 @@
 # Spellbound — Webcam Rune Duel
 
-A browser research prototype that turns index-finger air drawings into seven spells. Built with React, TypeScript, Canvas, and MediaPipe Hand Landmarker. Hand inference runs in a dedicated worker. No frames are sent to a server.
+A browser research prototype that turns index-finger air drawings into eight spells. Built with React, TypeScript, Canvas, and MediaPipe Hand Landmarker. Hand inference runs in a dedicated worker. No frames are sent to a server.
 
 ## Run locally
 
@@ -56,7 +56,7 @@ Use the HTTPS hosted URL; localhost on the developer's computer is not a shareab
 
 ## Study mode
 
-The guided flow is 14 practice attempts, 70 measured attempts (10 per rune), two counterbalanced duels, then 1–5 ratings after each duel. Enter a sequential participant number and a device description; odd/even numbers reverse condition order. Export JSON and CSV before starting another session. Each browser retains only its current study and prompted-practice totals. See [study protocol](docs/STUDY_PROTOCOL.md).
+The guided flow is 16 practice attempts, 80 measured attempts (10 per rune), two counterbalanced duels, then 1–5 ratings after each duel. Enter a sequential participant number and a device description; odd/even numbers reverse condition order. Export JSON and CSV before starting another session. Each browser retains only its current study and prompted-practice totals. See [study protocol](docs/STUDY_PROTOCOL.md).
 
 ## Implementation
 
@@ -87,6 +87,6 @@ Use the English / ไทย buttons above the play area to change language at an
 ## Fire and Water
 Fireball deals 8 direct damage and ignites the opponent. Burn deals 4 damage every second until Water is cast on the burning character; repeated fire does not stack burn or reset its timer. The Archivist spends 3 seconds casting Water on itself, pausing its normal phase timer, then waits a 6-second Water cooldown. Its Ember volley also ignites you unless blocked by Ward. Draw a rounded U to cast Water on yourself (4-second cooldown). Water extinguishes without healing; Mend heals without extinguishing. A barrier halves direct damage but not burn damage.
 
-Old six-rune studies remain available for export; start a new study for the seven-rune rules. Existing practice totals are preserved and Water starts with zero attempts.
+Older six- and seven-rune studies remain available for export; start a new study for the eight-rune rules. Existing practice totals are preserved, while newly introduced runes start with zero attempts.
 
 Choose **Learn Fire → Water** in Practice for a two-rune lesson without health loss or scored attempts. During duels, a prominent burn warning shows the Water rune and self-extinguish instruction.

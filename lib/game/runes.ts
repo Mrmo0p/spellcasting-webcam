@@ -11,6 +11,7 @@ export const RUNES:{id:RuneId;name:string;shape:string;effect:string;color:strin
 {id:'frost',name:'Frost',shape:'V shape',effect:'Delay an attack by 3 seconds',color:'#95dff2',cooldown:8000,closed:false,points:path([[.1,.1],[.5,.9],[.9,.1]])},
 {id:'mend',name:'Mend',shape:'Spiral',effect:'Restore 22 health',color:'#f2c4da',cooldown:14000,closed:false,points:path(spiral)},
 {id:'dispel',name:'Dispel',shape:'Horizontal line',effect:'Cancel a charged attack',color:'#ecd290',cooldown:9000,closed:false,points:path([[.1,.5],[.9,.5]])},
-{id:'water',name:'Water',shape:'U shape',effect:'Extinguish your burn',color:'#75d8ff',cooldown:4000,closed:false,points:path(water)}
+{id:'water',name:'Water',shape:'U shape',effect:'Extinguish your burn',color:'#75d8ff',cooldown:4000,closed:false,points:path(water)},
+{id:'star',name:'Star',shape:'Five-point star',effect:'Stun the enemy for 3 seconds',color:'#ffe47a',cooldown:10000,closed:true,points:path([[.5,.08],[.74,.82],[.12,.36],[.88,.36],[.26,.82],[.5,.08]])}
 ];
 export const runeById=(id:RuneId)=>RUNES.find(r=>r.id===id)!;
