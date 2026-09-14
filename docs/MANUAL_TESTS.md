@@ -34,6 +34,17 @@ Record browser version, OS, hardware, camera, lighting, distance, and result for
 - Victory and defeat stop damage and allow a fresh game.
 - Adaptive mode uses prompted practice labels, including offensive-rune recovery timing.
 
+## Private PvP
+
+- Start the web app and PvP Worker, then create a room in one browser and join it from another using the room code or invite link.
+- Verify invalid names/codes, a third player, and an unknown room fail without exposing tokens.
+- Confirm Ready requires a tracked hand, both players see the same three-second countdown, and attacks show the same server deadline.
+- Exercise all seven runes, simultaneous lethal attacks, burn/Water, Ward, Frost, Dispel, cooldown rejection, draw, rematch consensus, and leaving.
+- Reload once during combat and reconnect within 30 seconds; verify deadlines resume shifted. Disconnect again and verify the five-second forfeit.
+- Hide a tab or lose only hand tracking: the network match must continue. Disconnect the WebSocket: the match must pause.
+- Inspect WebSocket payloads and confirm no frames, landmarks, or drawing paths are transmitted.
+- Test English and Thai, two desktop browsers, and desktop-to-phone over HTTPS.
+
 ## Study and accessibility
 
 - Finish 14 practice + 70 measured prompts; each rune appears 10 times measured.

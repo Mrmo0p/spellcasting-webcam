@@ -27,6 +27,12 @@ test('Thai translates dynamic messages while retaining numbers and spell meaning
  assert.equal(translate('  Start tutorial  ','th'),'  เริ่มบทเรียน  ');
  assert.equal(translate('WARD','th'),'เกราะเวท');
 });
+test('Thai covers the PvP lobby, match state and dynamic player events',()=>{
+ for(const text of ['PRIVATE ONLINE DUEL','Create room','Join room','INCOMING SPELL','Request rematch','Camera is off. The duel continues.'])assert.notEqual(translate(text,'th'),text);
+ assert.equal(translate('Mali cast fireball.','th'),'Mali ร่ายลูกไฟ');
+ assert.equal(translate('12 seconds remaining','th'),'เหลือ 12 วินาที');
+ assert.equal(translate('Niran wins.','th'),'Niran ชนะ');
+});
 test('presentation localization preserves form values, refs and callbacks',()=>{
  const callback=()=>{},ref={current:null};
  const input=createElement('input',{value:'Practice',placeholder:'Test device',onChange:callback,ref});

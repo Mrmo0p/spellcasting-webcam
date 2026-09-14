@@ -32,6 +32,14 @@ Adaptive warning = 4 seconds + 2.5 seconds × error rate for the indicated count
 
 Combat advances using elapsed deltas, with no wall-clock dependency in the engine. Pauses freeze cooldowns, attacks, burn ticks and Water preparation. Hidden tabs, long animation gaps, or more than 1.2 seconds without a visible hand pause combat. Resuming requires explicit action and a visible hand.
 
+## Player versus player
+
+Private PvP rooms use a separate Cloudflare Worker and one SQLite-backed Durable Object per room. The Durable Object is authoritative for health, cooldown deadlines, incoming spells, burn ticks, disconnect grace, rematches, and outcomes. Its Hibernation WebSockets carry versioned snapshots and presentation events. Client timestamps are diagnostic only; all match deadlines use server epoch time.
+
+Recognition remains local. A client sends only a canonical rune ID after local recognition; it never sends camera frames, landmarks, or stroke paths. Capability tokens identify one room slot and are stored in session storage. Guest names are the only PvP preference stored locally.
+
+PvP attacks land after a fixed four-second warning. Damage due at the same timestamp is applied as one batch so simultaneous lethal hits draw. A disconnect pauses authoritative deadlines for one 30-second grace per player; later disconnects receive five seconds. Hand loss alone does not pause a network match. Waiting rooms expire after 30 minutes, finished rooms after 15 minutes, and inactive live matches after a two-hour safety limit.
+
 ## Persistence and interfaces
 
 TrackingSample carries capture, inference, receipt timing, landmarks, handedness, and aspect. Stroke owns sample points and start/release/end timestamps. RecognitionResult records winner, score, distances, timing, and reason. SpellCommand carries rune and game-relative time. Study records prompted targets separately from predictions, rejects, timings, condition, outcome, and ratings.

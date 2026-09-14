@@ -1,0 +1,18 @@
+{
+  "$schema": "../node_modules/wrangler/config-schema.json",
+  "name": "spellbound-pvp",
+  "main": "index.ts",
+  "compatibility_date": "2026-09-14",
+  "observability": { "enabled": true },
+  "durable_objects": {
+    "bindings": [
+      { "name": "MATCHES", "class_name": "MatchRoom" }
+    ]
+  },
+  "exports": {
+    "MatchRoom": { "type": "durable-object", "storage": "sqlite" }
+  },
+  "vars": {
+    "ALLOWED_ORIGINS": "http://localhost:3000,http://127.0.0.1:3000"
+  }
+}

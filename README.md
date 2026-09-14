@@ -19,6 +19,19 @@ npm run typecheck
 npm run build
 ```
 
+## Private online PvP
+
+PvP uses a separate Cloudflare Worker and a SQLite-backed Durable Object for each private room. Start the web app and match service in separate terminals:
+
+```sh
+npm run dev
+npm run pvp:dev
+```
+
+Open PvP, enter a guest name, and create or join a room with its six-character code. Both players enable their own camera and press Ready. Webcam frames, landmarks, and drawing paths never leave either device; the service receives only room credentials, readiness, rune IDs, and match events.
+
+For production, set `NEXT_PUBLIC_PVP_API_URL` before building the static site, set `ALLOWED_ORIGINS` in `worker/wrangler.jsonc` to the deployed frontend origin, authenticate Wrangler, and run `npm run pvp:deploy`. Use `npm run pvp:check` for a deployment dry run.
+
 The build is a static export in `dist/client/`. Sites uses the output directory in `.openai/hosting.json`. To serve production locally use `npx serve dist/client`.
 
 On this Windows host Node 24 completed compilation but hit a native shutdown assertion. The production build was successfully verified with installed Node 22.15.1 using `node --preserve-symlinks --preserve-symlinks-main node_modules/vinext/dist/cli.js build`. The preservation flags also avoid the host sandbox's path-resolution restriction. The CI target is Node 24 on Linux.
