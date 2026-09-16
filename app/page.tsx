@@ -1,176 +1,1955 @@
 'use client';
-import {useCallback,useEffect,useRef,useState} from 'react';
-import {Button} from '@/components/ui/button';
-import {Sparkles,Camera,CameraOff,Volume2,VolumeX,Pause,Play,Download,Settings2,ArrowUpRight,Shield,RotateCcw} from 'lucide-react';
-import {useTracking} from '@/hooks/use-tracking';
-import {StrokeGate} from '@/lib/game/gating';
-import {recognize,RECOGNIZER_VERSION} from '@/lib/game/recognition';
-import {RUNES,runeById} from '@/lib/game/runes';
-import {blankAccuracy,RUNE_IDS,type Accuracy,type RuneId,type Stroke,type TrackingSample,type RecognitionResult} from '@/lib/game/types';
-import {createCombat,tickCombat,castSpell,PATTERNS,type CombatState,type Condition} from '@/lib/game/combat';
-import {createStudy,isCurrentStudy,currentTarget,addTrial,finishDuel,rateDuel,summarize,studyCsv,type Study} from '@/lib/game/study';
-import {loadAccuracy,loadStudy,saveLocal} from '@/lib/game/storage';
-import {lessonAfterSample,recognitionHint,blockedSpellHint,type LessonStep} from '@/lib/game/coaching';
-import {framingHint} from '@/lib/game/framing';
-import {RuneCoach} from '@/components/rune-coach';
-import {Opponent} from '@/components/opponent';
-import {paintCast,type CastEffect} from '@/lib/game/effects';
-import {spellAvailability} from '@/lib/game/availability';
-import {localizeTree} from '@/lib/localize-tree';
-import {LANGUAGE_KEY,savedLocale,type Locale} from '@/lib/i18n';
-import {advanceElementLesson,type ElementLesson} from '@/lib/game/element-lesson';
-import {DuelSummary} from '@/components/duel-summary';
-import {SpellAudio} from '@/lib/game/audio';
-import {usePvp} from '@/hooks/use-pvp';
-import {PvpPanel} from '@/components/pvp-panel';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { Button } from '@/components/ui/button';
+import {
+  Sparkles,
+  Camera,
+  CameraOff,
+  Volume2,
+  VolumeX,
+  Pause,
+  Play,
+  Download,
+  Settings2,
+  ArrowUpRight,
+  Shield,
+  RotateCcw,
+} from 'lucide-react';
+import { useTracking } from '@/hooks/use-tracking';
+import { StrokeGate } from '@/lib/game/gating';
+import { recognize, RECOGNIZER_VERSION } from '@/lib/game/recognition';
+import { RUNES, runeById } from '@/lib/game/runes';
+import {
+  blankAccuracy,
+  RUNE_IDS,
+  type Accuracy,
+  type RuneId,
+  type Stroke,
+  type TrackingSample,
+  type RecognitionResult,
+} from '@/lib/game/types';
+import {
+  createCombat,
+  tickCombat,
+  castSpell,
+  PATTERNS,
+  type CombatState,
+  type Condition,
+} from '@/lib/game/combat';
+import {
+  createStudy,
+  isCurrentStudy,
+  currentTarget,
+  addTrial,
+  finishDuel,
+  rateDuel,
+  summarize,
+  studyCsv,
+  type Study,
+} from '@/lib/game/study';
+import { loadAccuracy, loadStudy, saveLocal } from '@/lib/game/storage';
+import {
+  lessonAfterSample,
+  recognitionHint,
+  blockedSpellHint,
+  type LessonStep,
+} from '@/lib/game/coaching';
+import { framingHint } from '@/lib/game/framing';
+import { RuneCoach } from '@/components/rune-coach';
+import { Opponent } from '@/components/opponent';
+import { paintCast, type CastEffect } from '@/lib/game/effects';
+import { spellAvailability } from '@/lib/game/availability';
+import { localizeTree } from '@/lib/localize-tree';
+import { LANGUAGE_KEY, savedLocale, type Locale } from '@/lib/i18n';
+import {
+  advanceElementLesson,
+  type ElementLesson,
+} from '@/lib/game/element-lesson';
+import { DuelSummary } from '@/components/duel-summary';
+import { SpellAudio } from '@/lib/game/audio';
+import { usePvp } from '@/hooks/use-pvp';
+import { PvpPanel } from '@/components/pvp-panel';
 
-type Mode='practice'|'duel'|'pvp'|'study';
-type Metrics={hz:number;inference:number;trail:number;release:number|null};
-const initialMetrics:Metrics={hz:0,inference:0,trail:0,release:null};
-const median=(values:number[])=>{if(!values.length)return 0;const a=[...values].sort((a,b)=>a-b);return a[Math.floor(a.length/2)];};
-function RuneIcon({id,className=''}:{id:RuneId;className?:string}){const rune=runeById(id);return <svg viewBox="0 0 100 100" className={'rune-icon '+className} aria-hidden="true" style={{color:rune.color}}><polyline points={rune.points.map(p=>p.x*100+','+p.y*100).join(' ')} fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/></svg>;}
-function download(name:string,text:string,type:string){const url=URL.createObjectURL(new Blob([text],{type}));const a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
-export default function Home(){
- const pvp=usePvp(),pvpRef=useRef(pvp);pvpRef.current=pvp;
- const [mode,setMode]=useState<Mode>('practice'),[target,setTarget]=useState<RuneId>('ward'),[accuracy,setAccuracy]=useState<Accuracy>(blankAccuracy),[study,setStudy]=useState<Study|null>(null),[combat,setCombat]=useState<CombatState|null>(null),[paused,setPaused]=useState(false),[pauseReason,setPauseReason]=useState(''),[sound,setSound]=useState(true),[settings,setSettings]=useState(false),[tracked,setTracked]=useState(false),[gateState,setGateState]=useState('rearm'),[metrics,setMetrics]=useState<Metrics>(initialMetrics),[feedback,setFeedback]=useState<{text:string;success:boolean}|null>(null),[lastResult,setLastResult]=useState<RecognitionResult|null>(null),[machine,setMachine]=useState(''),[sequence,setSequence]=useState(1),[consent,setConsent]=useState(false),[ratings,setRatings]=useState({enjoyment:3,responsiveness:3,fatigue:3}),[storageError,setStorageError]=useState(false),[loaded,setLoaded]=useState(false);
- const [locale,setLocale]=useState<Locale>('en');
- useEffect(()=>{try{setLocale(savedLocale(localStorage.getItem(LANGUAGE_KEY)));}catch{}},[]);
- useEffect(()=>{document.documentElement.lang=locale;},[locale]);
- const chooseLanguage=(next:Locale)=>{setLocale(next);try{localStorage.setItem(LANGUAGE_KEY,next);}catch{}};
- const [lesson,setLesson]=useState<LessonStep|null>(null),[lessonCompleted,setLessonCompleted]=useState(false);
- const [focusMode,setFocusMode]=useState(false),[facing,setFacing]=useState<'user'|'environment'>('user'),[framing,setFraming]=useState('Show one whole hand in even light.');
- const framingCandidate=useRef({text:'',since:0});
- const [battleLog,setBattleLog]=useState<{text:string;at:number}[]>([]);
- const addBattleEvent=useCallback((text:string,at:number)=>setBattleLog(items=>[...items,{text,at}].slice(-6)),[]);
- const [elementLesson,setElementLesson]=useState<ElementLesson|null>(null);
- const elementRef=useRef<ElementLesson|null>(null);
- const updateElementLesson=(step:ElementLesson|null)=>{elementRef.current=step;setElementLesson(step);};
- const lessonRef=useRef<LessonStep|null>(null);
- const updateLesson=(step:LessonStep|null)=>{lessonRef.current=step;setLesson(step);};
- const gate=useRef(new StrokeGate()),canvasRef=useRef<HTMLCanvasElement>(null),audio=useRef<SpellAudio|null>(null),lastHandAt=useRef(0),lastUi=useRef(0),frameTimes=useRef<number[]>([]),latencies=useRef<number[]>([]),inferences=useRef<number[]>([]),lastTrail=useRef<Stroke|null>(null),lastTrailAt=useRef(0),effect=useRef<CastEffect|null>(null),nextTrialAt=useRef(0),aspect=useRef(4/3),metricsRef=useRef(initialMetrics);
- const ctx=useRef({mode,target,accuracy,study,combat,paused});ctx.current={mode,target,accuracy,study,combat,paused};
- const strokeHandler=useRef<(stroke:Stroke)=>void>(()=>{});
- const updateStudy=useCallback((s:Study)=>{ctx.current.study=s;setStudy(s);if(!saveLocal('spellbound.study.v1',s))setStorageError(true);},[]);
- const updateCombat=useCallback((c:CombatState|null)=>{ctx.current.combat=c;setCombat(c);},[]);
- const pause=useCallback((reason:string)=>{ctx.current.paused=true;setPaused(true);setPauseReason(reason);gate.current.interrupt(performance.now());},[]);
- const onSample=useCallback((sample:TrackingSample)=>{
-  const now=performance.now();aspect.current=sample.aspect||4/3;
-  if(sample.landmarks.length)lastHandAt.current=now;
-  const hint=framingHint(sample.landmarks);if(hint!==framingCandidate.current.text)framingCandidate.current={text:hint,since:now};else if(now-framingCandidate.current.since>=700)setFraming(hint);
-  frameTimes.current.push(now);frameTimes.current=frameTimes.current.filter(t=>now-t<2000);
-  inferences.current.push(sample.inferenceMs);inferences.current=inferences.current.slice(-90);
-  metricsRef.current={...metricsRef.current,hz:frameTimes.current.length>1?(frameTimes.current.length-1)*1000/(now-frameTimes.current[0]):0,inference:median(inferences.current)};
-  if(!ctx.current.paused&&now>=nextTrialAt.current){const stroke=gate.current.feed(sample);if(lessonRef.current){const next=lessonAfterSample(lessonRef.current,gate.current.state);if(next!==lessonRef.current){lessonRef.current=next;setLesson(next);}}if(stroke)strokeHandler.current(stroke);}else gate.current.reset();
-  const start=sample.frameStartedAt;requestAnimationFrame(()=>{latencies.current.push(performance.now()-start);latencies.current=latencies.current.slice(-90);metricsRef.current.trail=median(latencies.current);});
-  if(now-lastUi.current>100){setTracked(sample.landmarks.length>0);setGateState(gate.current.state);setMetrics({...metricsRef.current});lastUi.current=now;}
- },[]);
- const tracking=useTracking(onSample);
- useEffect(()=>{setAccuracy(loadAccuracy());setStudy(loadStudy());try{const s=localStorage.getItem('spellbound.sound');setSound(s!=='false');setLessonCompleted(localStorage.getItem('spellbound.lesson.v1')==='"complete"');if(new URLSearchParams(location.search).has('room')){setMode('pvp');ctx.current.mode='pvp';}}catch{}audio.current=new SpellAudio();setLoaded(true);return ()=>{void audio.current?.context?.close();};},[]);
- useEffect(()=>{if(audio.current)audio.current.enabled=sound;if(loaded)try{localStorage.setItem('spellbound.sound',String(sound));}catch{}},[sound,loaded]);
- const beginCamera=(camera:'user'|'environment'=facing)=>{if(ctx.current.combat&&!ctx.current.combat.outcome)pause('Camera changed — resume when your hand is visible');setFacing(camera);setTracked(false);setGateState('rearm');setFraming('Show one whole hand in even light.');framingCandidate.current={text:'',since:0};lastTrail.current=null;setFeedback(null);void audio.current?.unlock();gate.current.reset();lastHandAt.current=0;frameTimes.current=[];latencies.current=[];inferences.current=[];setSettings(false);void tracking.start(camera);};
- const stopCamera=()=>{if(ctx.current.combat&&!ctx.current.combat.outcome)pause('Camera stopped');tracking.stop();gate.current.reset();setTracked(false);setGateState('rearm');setMetrics(initialMetrics);};
- const switchMode=(next:Mode)=>{if(ctx.current.mode==='study'&&ctx.current.study?.status==='duel'&&isCurrentStudy(ctx.current.study))return;if(ctx.current.mode==='pvp'&&next!=='pvp'&&pvpRef.current.roomCode)pvpRef.current.leave();updateLesson(null);updateElementLesson(null);gate.current.reset();lastTrail.current=null;updateCombat(null);setPaused(false);ctx.current.paused=false;setFeedback(null);setMode(next);ctx.current.mode=next;};
- const startLesson=()=>{switchMode('practice');setTarget('ward');ctx.current.target='ward';setLastResult(null);updateLesson('arm');};
- const startElementLesson=()=>{switchMode('practice');setTarget('fireball');ctx.current.target='fireball';setLastResult(null);updateElementLesson('fire');};
- const report=(text:string,success:boolean,rune:RuneId|null)=>{setFeedback({text,success});if(ctx.current.combat)addBattleEvent(text,ctx.current.combat.elapsed);effect.current={at:performance.now(),color:rune?runeById(rune).color:'#ed9c89',success,rune};audio.current?.play(success,rune?RUNE_IDS.indexOf(rune):0);};
- strokeHandler.current=(stroke)=>{
-  const state=ctx.current;if(state.paused)return;
-   if(state.mode==='study'&&(!state.study||!isCurrentStudy(state.study)||!['practice','measured','duel'].includes(state.study.status)))return;
-   if(state.mode==='duel'&&(!state.combat||state.combat.outcome))return;
-   if(state.mode==='pvp'&&pvpRef.current.state?.status!=='active')return;
-  const result=recognize(stroke),now=performance.now();setLastResult(result);lastTrail.current=stroke;lastTrailAt.current=now;metricsRef.current.release=now-stroke.releasedAt;
-  if(elementRef.current){
-   const step=elementRef.current;if(step==='done')return;
-   const next=advanceElementLesson(step,result.rune);
-   if(next!==step){updateElementLesson(next);gate.current.reset();setTarget('water');ctx.current.target='water';report(next==='water'?'Fireball recognized. Fire causes a lasting burn. Now practice Water on yourself.':'Water recognized. Practice burn extinguished — lesson complete!',true,result.rune);}
-   else report(result.rune?(step==='fire'?'For this step, draw a triangle for Fireball.':'For this step, draw a rounded U for Water.'):recognitionHint(result.reason),false,result.rune);
-   return;
-  }
-  if(lessonRef.current){
-   if(lessonRef.current==='done')return;
-   if(result.rune==='ward'){updateLesson('done');setLessonCompleted(true);if(!saveLocal('spellbound.lesson.v1','complete'))setStorageError(true);report('Ward recognized. Your first spell is complete!',true,'ward');}
-   else{updateLesson(gate.current.state==='rearm'?'arm':'draw');report(result.rune?runeById(result.rune).name+' recognized. For this lesson, trace a circle for Ward.':recognitionHint(result.reason),false,result.rune);}
-   return;
-  }
-  const prompted=state.mode==='study'&&state.study?currentTarget(state.study):state.mode==='practice'?state.target:null;
-  if(state.mode==='study'&&state.study&&prompted){const next=addTrial(state.study,result,stroke,{inferenceMs:metricsRef.current.inference,frameToTrailMs:metricsRef.current.trail,trackingHz:metricsRef.current.hz,now});updateStudy(next);nextTrialAt.current=now+1200;gate.current.reset();}
-  if(state.mode==='practice'){const a={...state.accuracy,[state.target]:{attempts:state.accuracy[state.target].attempts+1,correct:state.accuracy[state.target].correct+Number(result.rune===state.target)}};ctx.current.accuracy=a;setAccuracy(a);if(!saveLocal('spellbound.accuracy.v1',a))setStorageError(true);}
-   if(!result.rune){report(recognitionHint(result.reason),false,null);return;}
-   if(state.mode==='pvp'){const sent=pvpRef.current.cast(result.rune);report(sent?runeById(result.rune).name+' sent to the match server.':'The spell could not be sent. Check your connection.',sent,result.rune);return;}
-  if(prompted){const correct=prompted===result.rune;report(correct?runeById(result.rune).name+' recognized.':runeById(result.rune).name+' detected — the target was '+runeById(prompted).name+'.',correct,result.rune);return;}
-  if(state.combat&&!state.combat.outcome){const cast=castSpell(state.combat,{rune:result.rune,at:state.combat.elapsed});updateCombat(cast.state);report(cast.accepted?cast.state.message:blockedSpellHint(result.rune,cast.reason,state.combat.cooldowns[result.rune]||0),cast.accepted,result.rune);if(cast.state.outcome&&state.mode==='study'&&state.study)updateStudy(finishDuel(state.study,cast.state));}
- };
- useEffect(()=>{
-  let raf=0,previous=performance.now(),painted=0;
-  const loop=(now:number)=>{const delta=now-previous;previous=now;const s=ctx.current;
-   if(s.combat&&!s.combat.outcome&&!s.paused){
-    if(document.hidden||delta>1000)pause('Game paused while away');
-    else if(!lastHandAt.current||now-lastHandAt.current>1200)pause('Hand tracking lost');
-    else{const next=tickCombat(s.combat,delta,s.mode==='study'&&s.study?s.study.accuracy:s.accuracy);if(next.message!==s.combat.message){addBattleEvent(next.message,next.elapsed);setFeedback({text:next.message,success:next.player===s.combat.player});}ctx.current.combat=next;if(now-painted>80||next.outcome){setCombat(next);painted=now;}if(next.outcome&&s.mode==='study'&&s.study&&s.study.status==='duel')updateStudy(finishDuel(s.study,next));}
-   }
-   const canvas=canvasRef.current,c=canvas?.getContext('2d');if(canvas&&c){
-    const rect=canvas.getBoundingClientRect(),dpr=Math.min(devicePixelRatio||1,2),w=rect.width,h=rect.height;if(canvas.width!==Math.round(w*dpr)||canvas.height!==Math.round(h*dpr)){canvas.width=Math.round(w*dpr);canvas.height=Math.round(h*dpr);}c.setTransform(dpr,0,0,dpr,0,0);c.clearRect(0,0,w,h);
-    const dw=Math.min(w,h*aspect.current),dh=dw/aspect.current,ox=(w-dw)/2,oy=(h-dh)/2;
-    const active=s.mode==='study'&&s.study?currentTarget(s.study):s.target;
-    if((s.mode==='practice'||(s.mode==='study'&&s.study?.status==='practice'))&&active&&lastHandAt.current){const r=runeById(active),size=Math.min(dw,dh)*.62;c.beginPath();r.points.forEach((p,i)=>{const x=w/2+(p.x-.5)*size,y=h/2+(p.y-.5)*size;i?c.lineTo(x,y):c.moveTo(x,y);});c.strokeStyle=r.color+'35';c.lineWidth=2;c.setLineDash([5,8]);c.stroke();c.setLineDash([]);}
-    const pts=gate.current.points.length?gate.current.points:now-lastTrailAt.current<1300?lastTrail.current?.points||[]:[];
-    if(pts.length){c.beginPath();pts.forEach((p,i)=>{const x=ox+p.x/aspect.current*dw,y=oy+p.y*dh;i?c.lineTo(x,y):c.moveTo(x,y);});c.strokeStyle='#d3ffb3';c.lineWidth=3;c.lineJoin='round';c.lineCap='round';c.shadowColor='#bfff97';c.shadowBlur=12;c.stroke();c.shadowBlur=0;}
-    if(gate.current.cursor&&!s.paused){const p=gate.current.cursor;c.beginPath();c.arc(ox+p.x/aspect.current*dw,oy+p.y*dh,gate.current.state==='drawing'?6:4,0,Math.PI*2);c.fillStyle=gate.current.state==='drawing'?'#d6ffa9':'#e8eee5';c.fill();}
-    const e=effect.current;if(e&&!s.paused)paintCast(c,w,h,e,now,matchMedia('(prefers-reduced-motion: reduce)').matches);
-   }raf=requestAnimationFrame(loop);
-  };raf=requestAnimationFrame(loop);const visibility=()=>{if(document.hidden){gate.current.interrupt(performance.now());if(ctx.current.combat&&!ctx.current.combat.outcome)pause('Game paused while away');}};document.addEventListener('visibilitychange',visibility);
-  return ()=>{cancelAnimationFrame(raf);document.removeEventListener('visibilitychange',visibility);};
- },[pause,updateStudy,addBattleEvent]);
- useEffect(()=>{const handler=(e:KeyboardEvent)=>{if(e.target instanceof HTMLElement&&['INPUT','SELECT','TEXTAREA','BUTTON'].includes(e.target.tagName))return;if(e.code==='Escape'||e.code==='Space'){if(ctx.current.combat&&!ctx.current.combat.outcome){e.preventDefault();pause('Paused');}}};window.addEventListener('keydown',handler);return ()=>window.removeEventListener('keydown',handler);},[pause]);
- useEffect(()=>{if(tracking.status==='error'&&ctx.current.combat&&!ctx.current.combat.outcome)pause('Camera unavailable');},[tracking.status,pause]);
- useEffect(()=>{const context=(document as unknown as {modelContext?:{registerTool:(tool:unknown,options:{signal:AbortSignal})=>unknown}}).modelContext;if(!context)return;const controller=new AbortController();try{Promise.resolve(context.registerTool({name:'read_spellbound_session',description:'Read the current mode, camera state, and anonymous session progress. Does not expose frames or landmarks.',inputSchema:{type:'object',properties:{},additionalProperties:false},annotations:{readOnlyHint:true},execute:(input:unknown)=>{if(!input||typeof input!=='object'||Object.keys(input).length)throw new Error('Expected an empty object');const s=ctx.current;return {mode:s.mode,paused:s.paused,study:s.study?{id:s.study.id,status:s.study.status,trials:s.study.trials.length}:null,duel:s.combat?{player:s.combat.player,opponent:s.combat.opponent,outcome:s.combat.outcome}:null};}},{signal:controller.signal})).catch(()=>{});}catch{}return ()=>controller.abort();},[]);
- const startDuel=(condition:Condition,studySession=false)=>{void audio.current?.unlock();const s=ctx.current.study;const c=createCombat(condition,studySession&&s?s.accuracy:accuracy);setBattleLog([{text:c.message,at:0}]);updateCombat(c);setPaused(false);ctx.current.paused=false;gate.current.reset();setFeedback(null);if(studySession&&s)updateStudy({...s,status:'duel'});};
- const resume=()=>{if(tracking.status!=='ready'||!tracked)return;setPaused(false);ctx.current.paused=false;gate.current.reset();};
- const startStudy=()=>{const seed=sequence>>>0;updateStudy(createStudy(seed,machine.trim()||'Not documented',navigator.userAgent));updateCombat(null);gate.current.reset();setFeedback(null);};
- const compatibleStudy=!study||isCurrentStudy(study);
- const studyActive=mode==='study'&&compatibleStudy&&study?.status==='duel';
- const pvpActive=mode==='pvp'&&!!pvp.state&&['countdown','active','paused'].includes(pvp.state.status);
- const fighting=(mode==='duel'||studyActive)&&combat;
- const selected=mode==='study'&&study?currentTarget(study)||target:target;
- const rune=runeById(selected),summary=study?summarize(study.trials.filter(t=>t.phase==='measured')):null;
- const ready=tracking.status==='ready';
- const heading=mode==='practice'?['Make your first mark.','Point to draw. Curl your index finger to cast.']:mode==='duel'?['Enter the circle.','Read the attack. Draw your answer.']:mode==='pvp'?['Challenge another spellcaster.','Create a private room and duel in real time.']:['Put the magic to the test.','Guided rune trials and two duel conditions.'];
- return localizeTree(<main lang={locale} className={'app-shell '+(focusMode?'focus-mode':'')}>
-  <header className="topbar"><a className="brand" href="/"><Sparkles/><span>SPELLBOUND<small>THE WEBCAM GRIMOIRE</small></span></a><nav aria-label="Game modes">{(['practice','duel','pvp','study'] as Mode[]).map(t=><button key={t} disabled={(!!studyActive&&t!=='study')||(pvpActive&&t!=='pvp')} aria-current={mode===t?'page':undefined} className={mode===t?'active':''} onClick={()=>switchMode(t)}>{t==='pvp'?'PvP':t[0].toUpperCase()+t.slice(1)}</button>)}</nav><div className="row"><Button variant="ghost" aria-label={sound?'Mute sounds':'Enable sounds'} onClick={()=>{void audio.current?.unlock();setSound(!sound);}}>{sound?<Volume2/>:<VolumeX/>}</Button><Button variant="ghost" aria-label="Camera settings" aria-expanded={settings} onClick={()=>setSettings(!settings)}><Settings2/></Button></div></header>
-  <div className="language-bar"><div className="language-switch" role="group" aria-label="Language"><button type="button" lang="en" aria-pressed={locale==='en'} onClick={()=>chooseLanguage('en')}>English</button><button type="button" lang="th" aria-pressed={locale==='th'} onClick={()=>chooseLanguage('th')}>ไทย</button></div></div>
-  <div className="workspace"><section className="heading"><div><p className="eyebrow">YOUR HAND IS THE WAND</p><h1>{heading[0]}</h1><p>{heading[1]}</p></div><span className="session-label"><span className={ready?'live-dot':'idle-dot'}/> {ready?'CAMERA CONNECTED':'LOCAL SESSION'}</span></section>
-  {storageError&&<p role="alert" className="notice">Browser storage is unavailable. Export your study before leaving this page.</p>}
-  {settings&&<section className="settings-panel"><div><h2>Camera setup</h2><p>Use one hand in even light, with your palm facing the camera. Keep the entire hand in frame. On a phone, prop it up with room to move. Use Front camera to see yourself, or Back camera with help positioning the phone. Both previews are mirrored. Mobile performance is experimental.</p><p>Frames stay on your device. No video or audio is recorded.</p></div><div className="row"><Button className="primary-action" disabled={tracking.status==='loading'} onClick={()=>beginCamera()}><Camera/>{ready?'Restart camera':'Enable camera'}</Button>{ready&&<Button variant="outline" onClick={stopCamera}>Stop camera</Button>}</div></section>}
-  {mode==='practice'&&!elementLesson&&<section className="lesson-panel" aria-label="Guided first spell"><div><p className="eyebrow">YOUR FIRST SPELL</p>{lesson?<><h2>{lesson==='arm'?'1. Curl your index finger':lesson==='draw'?'2. Point and draw a circle':lesson==='cast'?'3. Curl and hold to cast':'You cast Ward!'}</h2><p role="status">{!ready?'Enable your camera below to follow the lesson.':!tracked?'Show your whole hand to the camera in even light.':lesson==='arm'?'Keep your palm facing the camera. Curl your index finger until the tracker is ready.':lesson==='draw'?'Extend your index finger, keeping the others curled. Wait for “Drawing”, then trace the circle guide.':lesson==='cast'?'Complete the circle, then curl your index finger and hold for about a third of a second.': 'You are ready to explore the other seven runes or enter a duel.'}</p><ol className="lesson-steps">{['Curl to prepare','Draw a circle','Curl to cast'].map((text,i)=><li key={text} aria-current={(['arm','draw','cast'] as const).indexOf(lesson as 'arm')===i?'step':undefined}>{text}</li>)}</ol></>:<><h2>{lessonCompleted?'Keep your casting hand ready.':'Learn your first spell with the camera.'}</h2><p>Follow three live steps. Tutorial attempts do not affect practice accuracy or study results.</p></>}</div><div className="row">{lesson?<Button variant="outline" onClick={()=>{updateLesson(null);gate.current.reset();setFeedback(null);}}>{lesson==='done'?'Continue practicing':'Exit tutorial'}</Button>:<Button variant="outline" onClick={startLesson}>{lessonCompleted?'Replay tutorial':'Start tutorial'}</Button>}{!lesson&&<Button variant="outline" onClick={startElementLesson}>Learn Fire → Water</Button>}</div></section>}
-  {mode==='practice'&&elementLesson&&<section className="lesson-panel element-lesson" aria-label="Fire and Water lesson"><div><p className="eyebrow">FIRE → WATER LESSON</p><h2>{elementLesson==='fire'?'1. Draw Fireball':elementLesson==='water'?'2. Extinguish a practice burn':'Fire and Water mastered'}</h2><p role="status">{elementLesson==='fire'?'Draw a triangle and curl your index finger. In a duel, Fireball ignites your opponent until they cast Water.':elementLesson==='water'?'Imagine you were hit by fire. Draw a rounded U and curl your index finger to cast Water on yourself.':'You learned both runes. Fire burns over time; Water extinguishes without healing.'}</p><p>No health is lost here. These attempts do not affect practice scores or study results.</p>{!ready&&<p>Enable your camera below to follow the lesson.</p>}</div><div className="row"><Button variant="outline" onClick={()=>{updateElementLesson(null);gate.current.reset();setFeedback(null);}}>{elementLesson==='done'?'Continue practicing':'Exit tutorial'}</Button></div></section>}
-  {mode==='practice'&&!lesson&&!elementLesson&&<RuneCoach locale={locale} runeId={target} accuracy={accuracy} onSelect={id=>{gate.current.reset();setTarget(id);ctx.current.target=id;setFeedback(null);lastTrail.current=null;}}/>}
-  <div className="casting-controls"><Button variant="outline" aria-pressed={focusMode} onClick={()=>setFocusMode(!focusMode)}>{focusMode?'Exit large drawing view':'Larger drawing view'}</Button><div className="row" aria-label="Camera direction"><Button variant="outline" aria-pressed={facing==='user'} disabled={tracking.status==='loading'} onClick={()=>beginCamera('user')}>Front camera</Button><Button variant="outline" aria-pressed={facing==='environment'} disabled={tracking.status==='loading'} onClick={()=>beginCamera('environment')}>Back camera</Button></div></div>
-  {ready&&<p className="framing-hint" role="status">{framing}</p>}
-   <div className="play-layout"><section className={'arena '+(fighting||mode==='pvp'?'duel-arena':'')}>
-    <div className="arena-top"><span>{mode==='practice'?'PRACTICE CHAMBER':mode==='duel'?'THE ARCHIVIST':mode==='pvp'?'PLAYER VS PLAYER':study?.id||'GUIDED STUDY'}</span><span>{fighting?combat!.condition.toUpperCase()+' DIFFICULTY':mode==='pvp'?(pvp.state?.status||'LOBBY').toUpperCase():mode==='study'&&study?study.status.toUpperCase():String(RUNE_IDS.indexOf(selected)+1).padStart(2,'0')+' / '+String(RUNE_IDS.length).padStart(2,'0')+' · '+rune.name.toUpperCase()}</span></div>
-   <div className="casting-surface"><canvas ref={canvasRef} className="trail-canvas" aria-label="Live fingertip drawing trail"/>
-    {!ready&&mode!=='pvp'?<div className="arena-center setup-center"><div className="rune-halo"><RuneIcon id="ward"/></div><p className="eyebrow">A LITTLE MAGIC STARTS HERE</p><h2>{tracking.status==='loading'?'Preparing your hand tracker…':'Bring your hand into play.'}</h2><p>{tracking.status==='loading'?'The first load may take a moment.':tracking.error||'Enable your camera to begin tracing spells.'}</p><Button disabled={tracking.status==='loading'} className="primary-action" onClick={()=>beginCamera()}><Camera/> {tracking.status==='loading'?'Loading…':tracking.status==='error'?'Retry camera':'Enable camera'} <ArrowUpRight/></Button><small>Your camera stays on your device.</small></div>:
-     mode==='pvp'?<PvpPanel locale={locale} pvp={pvp} cameraReady={ready} tracked={tracked} onEnableCamera={()=>beginCamera()}/>:
-     mode==='practice'?<div className="practice-prompt"><RuneIcon id={selected}/><div><span className="eyebrow">DRAW A {rune.shape.toUpperCase()}</span><h2>{rune.name}</h2></div></div>:
-    mode==='duel'&&!combat?<div className="arena-center setup-center"><div className="rune-halo"><Sparkles size={44}/></div><p className="eyebrow">YOUR OPPONENT AWAITS</p><h2>The Archivist</h2><p>100 health. Eight spells. Keep your hand in view.</p><div className="row"><Button className="primary-action" disabled={!tracked} onClick={()=>startDuel('adaptive')}>Start adaptive duel <ArrowUpRight/></Button><Button variant="outline" disabled={!tracked} onClick={()=>startDuel('fixed')}>Fixed difficulty</Button></div><small>{tracked?'Practice results set your adaptive counter windows.':'Show your hand to begin.'}</small></div>:null}
-   {ready&&mode==='study'&&(!study||study.status==='complete'||!compatibleStudy)&&<div className="arena-center study-intro"><p className="eyebrow">{study?!compatibleStudy?'GAME UPDATED':'SESSION COMPLETE':'GUIDED EVALUATION'}</p><h2>{study?!compatibleStudy?'Start fresh with the new spellbook.':'Your results are ready.':'A repeatable test of your runes.'}</h2><p>16 practice strokes · 80 measured strokes · 2 duels</p><label>Test device <input value={machine} onChange={e=>setMachine(e.target.value)} placeholder="e.g. iPhone 15 / Windows laptop"/></label><label>Participant sequence <input type="number" min="1" max="4294967295" value={sequence} onChange={e=>setSequence(Math.max(1,Math.min(4294967295,Number(e.target.value)||1)))}/></label><label className="check"><input type="checkbox" checked={consent} onChange={e=>setConsent(e.target.checked)}/> I agree to store anonymous results on this device.</label><Button className="primary-action" disabled={!consent||!tracked} onClick={startStudy}>{study?'Start a new session':'Begin practice'}</Button>{study&&<small>Export this session below before starting another.</small>}</div>}
-   {ready&&mode==='study'&&compatibleStudy&&study&&['practice','measured'].includes(study.status)&&<div className="practice-prompt"><RuneIcon id={selected}/><div><span className="eyebrow">{study.status==='practice'?'PRACTICE':'MEASURED TRIAL'} {study.trials.filter(t=>t.phase===study.status).length+1} / {study.status==='practice'?study.practiceOrder.length:study.order.length}</span><h2>{rune.name} <small>{rune.shape}</small></h2></div></div>}
-   {ready&&mode==='study'&&compatibleStudy&&study?.status==='duel-ready'&&<div className="arena-center setup-center"><p className="eyebrow">DUEL {study.duels.length+1} OF 2</p><h2>{study.conditions[study.duels.length]==='adaptive'?'Adaptive':'Fixed'} difficulty</h2><p>{study.conditions[study.duels.length]==='adaptive'?'Counter windows use your practice accuracy.':'Each attack starts with a four-second warning.'}</p><Button className="primary-action" disabled={!tracked} onClick={()=>startDuel(study.conditions[study.duels.length],true)}>Begin duel</Button></div>}
-   {fighting&&<><div className="health-display"><div><span>YOU {combat!.shield&&<Shield size={13}/>} <b>{combat!.player}</b></span><meter value={combat!.player} min="0" max="100" aria-label="Player health"/></div><div><span>THE ARCHIVIST <b>{combat!.opponent}</b></span><meter className="enemy-health" value={combat!.opponent} min="0" max="100" aria-label="Opponent health"/></div></div><div className="burn-status"><span className={combat!.playerBurn?'on-fire':''}>{combat!.playerBurn?'You are burning: −4 health / second. Draw a U for Water.':'You: not burning'}</span><span className={combat!.opponentBurn?'on-fire':''}>{combat!.opponentBurn?'Opponent burning: −4 health / second':'Opponent: not burning'}</span></div>{combat!.opponentStun>0&&<div className="stun-status"><span>The Archivist is stunned — {(combat!.opponentStun/1000).toFixed(1)}s</span></div>}<Opponent combat={combat!} paused={paused}/><div className="attack-prompt"><p className="eyebrow">{combat!.opponentStun>0?'ENEMY STUNNED':combat!.opponentWaterCast>0?'CASTING WATER ON ITSELF':combat!.phase==='telegraph'?'INCOMING ATTACK':combat!.phase==='recovery'?'COUNTERATTACK NOW':'BARRIER ACTIVE'}</p><h2>{combat!.opponentStun>0?'The Archivist cannot act':combat!.opponentWaterCast>0?'The Archivist is extinguishing its burn':combat!.phase==='telegraph'?PATTERNS[combat!.round%3].name:combat!.phase==='recovery'?'The Archivist is recovering':'Damage is halved'}</h2><strong>{((combat!.opponentStun||combat!.opponentWaterCast||combat!.remaining)/1000).toFixed(1)}<small>s</small></strong>{combat!.phase==='telegraph'&&!combat!.opponentWaterCast&&!combat!.opponentStun&&<p>Try {runeById(PATTERNS[combat!.round%3].counter).name}</p>}</div><Button className="pause-button" variant="outline" onClick={()=>pause('Paused')} disabled={!!combat!.outcome}><Pause/> Pause</Button></>}
-   {fighting&&paused&&!combat!.outcome&&<div className="arena-overlay"><Pause/><h2>{pauseReason}</h2><p>{tracked?'Curl your index finger before resuming.':'Bring your hand back into view.'}</p><Button className="primary-action" disabled={!ready||!tracked} onClick={resume}><Play/> Resume</Button></div>}
-   {mode==='duel'&&combat?.outcome&&<div className="arena-overlay"><Sparkles/><p className="eyebrow">DUEL COMPLETE</p><h2>{combat.outcome==='victory'?'The circle is yours.':'The Archivist prevails.'}</h2><p>{combat.casts} spells cast · {Math.round(combat.elapsed/1000)} seconds</p><DuelSummary stats={combat.stats} locale={locale}/><Button className="primary-action" onClick={()=>updateCombat(null)}><RotateCcw/> Play again</Button></div>}
-   {ready&&mode==='study'&&compatibleStudy&&study?.status==='rating'&&<div className="arena-center ratings-panel"><p className="eyebrow">DUEL COMPLETE · {study.duels.at(-1)?.outcome}</p><h2>How did that feel?</h2><DuelSummary stats={study.duels.at(-1)?.stats} locale={locale}/>{(['enjoyment','responsiveness','fatigue'] as const).map(k=><label key={k}>{k[0].toUpperCase()+k.slice(1)} <select value={ratings[k]} onChange={e=>setRatings({...ratings,[k]:Number(e.target.value)})}>{[1,2,3,4,5].map(v=><option key={v} value={v}>{v}{v===1?' — Low':v===5?' — High':''}</option>)}</select></label>)}<Button className="primary-action" onClick={()=>{updateStudy(rateDuel(study,ratings));updateCombat(null);setRatings({enjoyment:3,responsiveness:3,fatigue:3});}}>Save ratings</Button></div>}
-   </div>
-   {fighting&&combat!.playerBurn&&!paused&&!combat!.outcome&&<div className="burn-alert" role="status"><RuneIcon id="water"/><div><strong>YOU ARE BURNING</strong><p>Draw a rounded U → cast Water on yourself.</p><small>Water stops the burn. Mend only restores health.</small></div></div>}
-   <div className="feedback-line" role="status" aria-live="polite">{feedback?<span className={feedback.success?'success':'error'}>{feedback.text}</span>:ready?'Curl your index finger to arm, then point to draw. Curl it again and hold briefly to cast.':'Camera permission is required to cast.'}</div>
-   <div className="arena-bottom"><span><i className={tracked?'live-dot':'idle-dot'}/> {ready?(tracked?(gateState==='drawing'?'Drawing — curl index to cast':gateState==='releasing'?'Hold index curled to cast…':gateState==='rearm'?'Curl index to arm':'Hand tracked'):gateState==='recovering'?'Brief tracking gap — keeping your stroke':'No hand detected'):tracking.status==='loading'?'Loading tracker…':'Camera off'}</span><span>{ready?metrics.hz.toFixed(0)+' Hz · '+metrics.trail.toFixed(0)+' ms trail':'POINT TO DRAW · CURL INDEX TO CAST'}</span></div>
-  </section>
-   <aside className="side-panel"><p className="eyebrow">{ready?'YOUR CASTING HAND':'THE FIRST LESSON'}</p><div className={'camera-preview '+(ready?'':'camera-inactive')}><video ref={tracking.videoRef} autoPlay playsInline muted aria-label="Mirrored webcam preview"/>{!ready&&<CameraOff size={26}/>}<span>{ready?(facing==='environment'?'BACK · MIRRORED':'FRONT · MIRRORED'):'CAMERA OFF'}</span></div>{ready?<><h2>{mode==='practice'?rune.name:mode==='duel'?'Keep your hand in view.':mode==='pvp'?'PvP spellcasting':'One stroke at a time.'}</h2><p className="side-copy">{mode==='practice'?rune.effect+'. Trace the guide and curl your index finger to finish.':mode==='pvp'?'Your camera stays local. Only accepted rune events are sent to the match server.':'Point with your index finger to draw. Curl the other fingers. Curl your index finger to cast.'}</p><div className="metrics"><div><span>Tracking</span><b>{metrics.hz.toFixed(1)} Hz</b></div><div><span>Inference</span><b>{metrics.inference.toFixed(0)} ms</b></div><div><span>Frame → trail</span><b>{metrics.trail.toFixed(0)} ms</b></div><div><span>Release → cast</span><b>{metrics.release===null?'—':metrics.release.toFixed(0)+' ms'}</b></div></div>{mode==='practice'&&<p className="tip">{accuracy[target].correct} / {accuracy[target].attempts} correct for {rune.name} in prompted practice.</p>}<Button variant="outline" className="camera-stop" onClick={stopCamera}><CameraOff/> Stop camera</Button></>:<><h2>Trace. Release. Cast.</h2><ol className="lessons">{[['Find your frame','Keep one hand visible, with room to move.'],['Point to draw','Extend your index finger. Curl the others.'],['Release the spell','Curl your index finger when the rune is complete.']].map(([t,p],i)=><li key={t}><b>0{i+1}</b><div><strong>{t}</strong><p>{p}</p></div></li>)}</ol></>}
-  {tracking.error&&<p role="alert" className="error side-copy">{tracking.error}</p>}</aside></div>
-  <section className="spellbook"><div className="section-label"><h2>Your spellbook</h2><span>{mode==='practice'?'SELECT A RUNE TO PRACTICE':'EIGHT RUNES. ONE HAND.'}</span></div><div className="rune-grid">{RUNES.map(r=><button className={'rune-card '+(selected===r.id?'selected':'')} key={r.id} aria-pressed={mode==='practice'?selected===r.id:undefined} disabled={mode!=='practice'||lesson!==null||elementLesson!==null} onClick={()=>{gate.current.reset();setTarget(r.id);ctx.current.target=r.id;setFeedback(null);lastTrail.current=null;}}><RuneIcon id={r.id}/><strong>{r.name}</strong><small>{r.shape}</small><span className="rune-effect">{r.effect}</span>{combat&&<div className="spell-availability"><span>{spellAvailability(combat,r.id)}</span><progress max={r.cooldown} value={Math.max(0,r.cooldown-(combat.cooldowns[r.id]||0))} aria-label={r.name+' cooldown recovery'}/></div>}</button>)}</div></section>
-  {combat&&battleLog.length>0&&<section className="battle-log" aria-label="Recent battle events"><h2>Recent battle events</h2><ol>{battleLog.map((event,i)=><li key={i}><time>{Math.floor(event.at/60000)}:{String(Math.floor(event.at/1000)%60).padStart(2,'0')}</time><span>{event.text}</span></li>)}</ol></section>}
-  {mode==='study'&&study&&summary&&<section className="results"><div className="section-label"><div><p className="eyebrow">{study.id} · SAVED ON THIS DEVICE</p><h2>Session results</h2></div><div className="row"><Button variant="outline" onClick={()=>download(study.id+'.json',JSON.stringify({...study,summary},null,2),'application/json')}><Download/> JSON</Button><Button variant="outline" onClick={()=>download(study.id+'.csv',studyCsv(study),'text/csv')}><Download/> CSV</Button></div></div><div className="result-numbers"><div><b>{summary.total?Math.round(summary.correct/summary.total*100)+'%':'—'}</b><span>Measured accuracy</span></div><div><b>{summary.total} / {study.order.length}</b><span>Measured attempts</span></div><div><b>{summary.rejected}</b><span>Rejected attempts</span></div><div><b>{study.duels.length} / 2</b><span>Duels recorded</span></div></div><details><summary>Per-rune accuracy and confusion matrix</summary><div className="table-scroll"><table><caption>Rows: target rune · Columns: detected rune</caption><thead><tr><th>Target</th>{RUNES.map(r=><th key={r.id}>{r.name}</th>)}<th>Rejected</th><th>Accuracy</th></tr></thead><tbody>{RUNES.map(r=><tr key={r.id}><th>{r.name}</th>{[...RUNE_IDS,'rejected'].map(k=><td key={k}>{summary.matrix[r.id][k]}</td>)}<td>{summary.accuracy[r.id].attempts?Math.round(summary.accuracy[r.id].correct/summary.accuracy[r.id].attempts*100)+'%':'—'}</td></tr>)}</tbody></table></div></details><p className="side-copy">Rejected strokes count as incorrect. Thresholds are fixed for this version; pilot tuning and human evaluation are pending.</p>{study.status==='duel'&&<Button variant="outline" onClick={()=>{if(combat)updateStudy(finishDuel(study,combat));updateCombat(null);setPaused(false);}}>End duel early and record as aborted</Button>}</section>}
-  {lastResult&&<details className="recognition-details"><summary>Last recognition details</summary><p>Match score: {lastResult.score.toFixed(3)} · Distance: {lastResult.distance.toFixed(3)} · Runner-up: {lastResult.runnerUpDistance.toFixed(3)} · Recognition: {lastResult.recognitionMs.toFixed(1)} ms · {lastResult.reason||'Accepted'}</p><p>A match score is a geometric similarity score, not a probability.</p></details>}
-  <footer><span>WEBCAM MAGIC, NO EXTRA HARDWARE.</span><span>Research prototype · {RECOGNIZER_VERSION}</span></footer></div>
- </main>,locale);
+type Mode = 'practice' | 'duel' | 'pvp' | 'study';
+type Metrics = {
+  hz: number;
+  inference: number;
+  trail: number;
+  release: number | null;
+};
+const initialMetrics: Metrics = {
+  hz: 0,
+  inference: 0,
+  trail: 0,
+  release: null,
+};
+const median = (values: number[]) => {
+  if (!values.length) return 0;
+  const a = [...values].sort((a, b) => a - b);
+  return a[Math.floor(a.length / 2)];
+};
+function RuneIcon({ id, className = '' }: { id: RuneId; className?: string }) {
+  const rune = runeById(id);
+  return (
+    <svg
+      viewBox="0 0 100 100"
+      className={'rune-icon ' + className}
+      aria-hidden="true"
+      style={{ color: rune.color }}
+    >
+      <polyline
+        points={rune.points.map((p) => p.x * 100 + ',' + p.y * 100).join(' ')}
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="3"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+function download(name: string, text: string, type: string) {
+  const url = URL.createObjectURL(new Blob([text], { type }));
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = name;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+export default function Home() {
+  const pvp = usePvp(),
+    pvpRef = useRef(pvp);
+  pvpRef.current = pvp;
+  const remoteAudioStroke = useRef('');
+  const [mode, setMode] = useState<Mode>('practice'),
+    [target, setTarget] = useState<RuneId>('ward'),
+    [accuracy, setAccuracy] = useState<Accuracy>(blankAccuracy),
+    [study, setStudy] = useState<Study | null>(null),
+    [combat, setCombat] = useState<CombatState | null>(null),
+    [paused, setPaused] = useState(false),
+    [pauseReason, setPauseReason] = useState(''),
+    [sound, setSound] = useState(true),
+    [settings, setSettings] = useState(false),
+    [tracked, setTracked] = useState(false),
+    [gateState, setGateState] = useState('rearm'),
+    [metrics, setMetrics] = useState<Metrics>(initialMetrics),
+    [feedback, setFeedback] = useState<{
+      text: string;
+      success: boolean;
+    } | null>(null),
+    [lastResult, setLastResult] = useState<RecognitionResult | null>(null),
+    [machine, setMachine] = useState(''),
+    [sequence, setSequence] = useState(1),
+    [consent, setConsent] = useState(false),
+    [ratings, setRatings] = useState({
+      enjoyment: 3,
+      responsiveness: 3,
+      fatigue: 3,
+    }),
+    [storageError, setStorageError] = useState(false),
+    [loaded, setLoaded] = useState(false);
+  const [locale, setLocale] = useState<Locale>('en');
+  useEffect(() => {
+    try {
+      setLocale(savedLocale(localStorage.getItem(LANGUAGE_KEY)));
+    } catch {}
+  }, []);
+  useEffect(() => {
+    document.documentElement.lang = locale;
+  }, [locale]);
+  const chooseLanguage = (next: Locale) => {
+    setLocale(next);
+    try {
+      localStorage.setItem(LANGUAGE_KEY, next);
+    } catch {}
+  };
+  const [lesson, setLesson] = useState<LessonStep | null>(null),
+    [lessonCompleted, setLessonCompleted] = useState(false);
+  const [focusMode, setFocusMode] = useState(false),
+    [facing, setFacing] = useState<'user' | 'environment'>('user'),
+    [framing, setFraming] = useState('Show one whole hand in even light.');
+  const framingCandidate = useRef({ text: '', since: 0 });
+  const [battleLog, setBattleLog] = useState<{ text: string; at: number }[]>(
+    [],
+  );
+  const addBattleEvent = useCallback(
+    (text: string, at: number) =>
+      setBattleLog((items) => [...items, { text, at }].slice(-6)),
+    [],
+  );
+  const [elementLesson, setElementLesson] = useState<ElementLesson | null>(
+    null,
+  );
+  const elementRef = useRef<ElementLesson | null>(null);
+  const updateElementLesson = (step: ElementLesson | null) => {
+    elementRef.current = step;
+    setElementLesson(step);
+  };
+  const lessonRef = useRef<LessonStep | null>(null);
+  const updateLesson = (step: LessonStep | null) => {
+    lessonRef.current = step;
+    setLesson(step);
+  };
+  const gate = useRef(new StrokeGate()),
+    canvasRef = useRef<HTMLCanvasElement>(null),
+    audio = useRef<SpellAudio | null>(null),
+    lastHandAt = useRef(0),
+    lastUi = useRef(0),
+    frameTimes = useRef<number[]>([]),
+    latencies = useRef<number[]>([]),
+    inferences = useRef<number[]>([]),
+    lastTrail = useRef<Stroke | null>(null),
+    lastTrailAt = useRef(0),
+    effect = useRef<CastEffect | null>(null),
+    nextTrialAt = useRef(0),
+    aspect = useRef(4 / 3),
+    metricsRef = useRef(initialMetrics);
+  const ctx = useRef({ mode, target, accuracy, study, combat, paused });
+  ctx.current = { mode, target, accuracy, study, combat, paused };
+  const strokeHandler = useRef<(stroke: Stroke) => void>(() => {});
+  const updateStudy = useCallback((s: Study) => {
+    ctx.current.study = s;
+    setStudy(s);
+    if (!saveLocal('spellbound.study.v1', s)) setStorageError(true);
+  }, []);
+  const updateCombat = useCallback((c: CombatState | null) => {
+    ctx.current.combat = c;
+    setCombat(c);
+  }, []);
+  const pause = useCallback((reason: string) => {
+    ctx.current.paused = true;
+    setPaused(true);
+    setPauseReason(reason);
+    gate.current.interrupt(performance.now());
+  }, []);
+  const onSample = useCallback((sample: TrackingSample) => {
+    const now = performance.now();
+    aspect.current = sample.aspect || 4 / 3;
+    if (sample.landmarks.length) lastHandAt.current = now;
+    const hint = framingHint(sample.landmarks);
+    if (hint !== framingCandidate.current.text)
+      framingCandidate.current = { text: hint, since: now };
+    else if (now - framingCandidate.current.since >= 700) setFraming(hint);
+    frameTimes.current.push(now);
+    frameTimes.current = frameTimes.current.filter((t) => now - t < 2000);
+    inferences.current.push(sample.inferenceMs);
+    inferences.current = inferences.current.slice(-90);
+    metricsRef.current = {
+      ...metricsRef.current,
+      hz:
+        frameTimes.current.length > 1
+          ? ((frameTimes.current.length - 1) * 1000) /
+            (now - frameTimes.current[0])
+          : 0,
+      inference: median(inferences.current),
+    };
+    if (!ctx.current.paused && now >= nextTrialAt.current) {
+      const stroke = gate.current.feed(sample);
+      if (ctx.current.mode === 'pvp')
+        pvpRef.current.syncTrail(
+          gate.current.points,
+          gate.current.state,
+          aspect.current,
+          sample.landmarks.length > 0,
+        );
+      if (lessonRef.current) {
+        const next = lessonAfterSample(lessonRef.current, gate.current.state);
+        if (next !== lessonRef.current) {
+          lessonRef.current = next;
+          setLesson(next);
+        }
+      }
+      if (stroke) strokeHandler.current(stroke);
+    } else gate.current.reset();
+    const start = sample.frameStartedAt;
+    requestAnimationFrame(() => {
+      latencies.current.push(performance.now() - start);
+      latencies.current = latencies.current.slice(-90);
+      metricsRef.current.trail = median(latencies.current);
+    });
+    if (now - lastUi.current > 100) {
+      setTracked(sample.landmarks.length > 0);
+      setGateState(gate.current.state);
+      setMetrics({ ...metricsRef.current });
+      lastUi.current = now;
+    }
+  }, []);
+  const tracking = useTracking(onSample);
+  useEffect(() => {
+    setAccuracy(loadAccuracy());
+    setStudy(loadStudy());
+    try {
+      const s = localStorage.getItem('spellbound.sound');
+      setSound(s !== 'false');
+      setLessonCompleted(
+        localStorage.getItem('spellbound.lesson.v1') === '"complete"',
+      );
+      if (new URLSearchParams(location.search).has('room')) {
+        setMode('pvp');
+        ctx.current.mode = 'pvp';
+      }
+    } catch {}
+    audio.current = new SpellAudio();
+    setLoaded(true);
+    return () => {
+      void audio.current?.context?.close();
+    };
+  }, []);
+  useEffect(() => {
+    if (audio.current) {
+      audio.current.enabled = sound;
+      if (!sound) audio.current.stopTrail();
+    }
+    if (loaded)
+      try {
+        localStorage.setItem('spellbound.sound', String(sound));
+      } catch {}
+  }, [sound, loaded]);
+  useEffect(() => {
+    const trail = pvp.remoteTrail;
+    if (!trail || !sound) {
+      audio.current?.stopTrail();
+      remoteAudioStroke.current = '';
+      return;
+    }
+    if (trail.status === 'drawing' || trail.status === 'completed') {
+      remoteAudioStroke.current = trail.strokeId;
+      audio.current?.trailHum(Math.min(1, trail.points.length / 120));
+    } else if (remoteAudioStroke.current === trail.strokeId) {
+      audio.current?.stopTrail(trail.status === 'accepted');
+      remoteAudioStroke.current = '';
+    }
+  }, [pvp.remoteTrail, sound]);
+  const beginCamera = (camera: 'user' | 'environment' = facing) => {
+    if (ctx.current.combat && !ctx.current.combat.outcome)
+      pause('Camera changed — resume when your hand is visible');
+    pvpRef.current.finishTrail('interrupted');
+    setFacing(camera);
+    setTracked(false);
+    setGateState('rearm');
+    setFraming('Show one whole hand in even light.');
+    framingCandidate.current = { text: '', since: 0 };
+    lastTrail.current = null;
+    setFeedback(null);
+    void audio.current?.unlock();
+    gate.current.reset();
+    lastHandAt.current = 0;
+    frameTimes.current = [];
+    latencies.current = [];
+    inferences.current = [];
+    setSettings(false);
+    void tracking.start(camera);
+  };
+  const stopCamera = () => {
+    if (ctx.current.combat && !ctx.current.combat.outcome)
+      pause('Camera stopped');
+    pvpRef.current.finishTrail('interrupted');
+    tracking.stop();
+    gate.current.reset();
+    setTracked(false);
+    setGateState('rearm');
+    setMetrics(initialMetrics);
+  };
+  const switchMode = (next: Mode) => {
+    if (
+      ctx.current.mode === 'study' &&
+      ctx.current.study?.status === 'duel' &&
+      isCurrentStudy(ctx.current.study)
+    )
+      return;
+    if (ctx.current.mode === 'pvp' && next !== 'pvp' && pvpRef.current.roomCode)
+      pvpRef.current.leave();
+    updateLesson(null);
+    updateElementLesson(null);
+    gate.current.reset();
+    lastTrail.current = null;
+    updateCombat(null);
+    setPaused(false);
+    ctx.current.paused = false;
+    setFeedback(null);
+    setMode(next);
+    ctx.current.mode = next;
+  };
+  const startLesson = () => {
+    switchMode('practice');
+    setTarget('ward');
+    ctx.current.target = 'ward';
+    setLastResult(null);
+    updateLesson('arm');
+  };
+  const startElementLesson = () => {
+    switchMode('practice');
+    setTarget('fireball');
+    ctx.current.target = 'fireball';
+    setLastResult(null);
+    updateElementLesson('fire');
+  };
+  const report = (text: string, success: boolean, rune: RuneId | null) => {
+    setFeedback({ text, success });
+    if (ctx.current.combat) addBattleEvent(text, ctx.current.combat.elapsed);
+    effect.current = {
+      at: performance.now(),
+      color: rune ? runeById(rune).color : '#ed9c89',
+      success,
+      rune,
+    };
+    audio.current?.play(success, rune ? RUNE_IDS.indexOf(rune) : 0);
+  };
+  strokeHandler.current = (stroke) => {
+    const state = ctx.current;
+    if (state.paused) return;
+    if (
+      state.mode === 'study' &&
+      (!state.study ||
+        !isCurrentStudy(state.study) ||
+        !['practice', 'measured', 'duel'].includes(state.study.status))
+    )
+      return;
+    if (state.mode === 'duel' && (!state.combat || state.combat.outcome))
+      return;
+    if (state.mode === 'pvp' && pvpRef.current.state?.status !== 'active')
+      return;
+    const result = recognize(stroke),
+      now = performance.now(),
+      pvpStrokeId =
+        state.mode === 'pvp'
+          ? pvpRef.current.finishTrail(
+              stroke.cancelled
+                ? stroke.cancelled === 'tracking-lost'
+                  ? 'tracking-lost'
+                  : 'interrupted'
+                : result.rune
+                  ? 'completed'
+                  : 'unrecognized',
+            )
+          : undefined;
+    setLastResult(result);
+    lastTrail.current = stroke;
+    lastTrailAt.current = now;
+    metricsRef.current.release = now - stroke.releasedAt;
+    if (elementRef.current) {
+      const step = elementRef.current;
+      if (step === 'done') return;
+      const next = advanceElementLesson(step, result.rune);
+      if (next !== step) {
+        updateElementLesson(next);
+        gate.current.reset();
+        setTarget('water');
+        ctx.current.target = 'water';
+        report(
+          next === 'water'
+            ? 'Fireball recognized. Fire causes a lasting burn. Now practice Water on yourself.'
+            : 'Water recognized. Practice burn extinguished — lesson complete!',
+          true,
+          result.rune,
+        );
+      } else
+        report(
+          result.rune
+            ? step === 'fire'
+              ? 'For this step, draw a triangle for Fireball.'
+              : 'For this step, draw a rounded U for Water.'
+            : recognitionHint(result.reason),
+          false,
+          result.rune,
+        );
+      return;
+    }
+    if (lessonRef.current) {
+      if (lessonRef.current === 'done') return;
+      if (result.rune === 'ward') {
+        updateLesson('done');
+        setLessonCompleted(true);
+        if (!saveLocal('spellbound.lesson.v1', 'complete'))
+          setStorageError(true);
+        report('Ward recognized. Your first spell is complete!', true, 'ward');
+      } else {
+        updateLesson(gate.current.state === 'rearm' ? 'arm' : 'draw');
+        report(
+          result.rune
+            ? runeById(result.rune).name +
+                ' recognized. For this lesson, trace a circle for Ward.'
+            : recognitionHint(result.reason),
+          false,
+          result.rune,
+        );
+      }
+      return;
+    }
+    const prompted =
+      state.mode === 'study' && state.study
+        ? currentTarget(state.study)
+        : state.mode === 'practice'
+          ? state.target
+          : null;
+    if (state.mode === 'study' && state.study && prompted) {
+      const next = addTrial(state.study, result, stroke, {
+        inferenceMs: metricsRef.current.inference,
+        frameToTrailMs: metricsRef.current.trail,
+        trackingHz: metricsRef.current.hz,
+        now,
+      });
+      updateStudy(next);
+      nextTrialAt.current = now + 1200;
+      gate.current.reset();
+    }
+    if (state.mode === 'practice') {
+      const a = {
+        ...state.accuracy,
+        [state.target]: {
+          attempts: state.accuracy[state.target].attempts + 1,
+          correct:
+            state.accuracy[state.target].correct +
+            Number(result.rune === state.target),
+        },
+      };
+      ctx.current.accuracy = a;
+      setAccuracy(a);
+      if (!saveLocal('spellbound.accuracy.v1', a)) setStorageError(true);
+    }
+    if (stroke.cancelled && state.mode === 'pvp') {
+      report(
+        stroke.cancelled === 'tracking-lost'
+          ? 'Tracking was lost before the rune finished.'
+          : 'The rune was interrupted.',
+        false,
+        null,
+      );
+      return;
+    }
+    if (!result.rune) {
+      report(recognitionHint(result.reason), false, null);
+      return;
+    }
+    if (state.mode === 'pvp') {
+      const sent = pvpRef.current.cast(result.rune, pvpStrokeId);
+      report(
+        sent
+          ? runeById(result.rune).name + ' sent to the match server.'
+          : 'The spell could not be sent. Check your connection.',
+        sent,
+        result.rune,
+      );
+      return;
+    }
+    if (prompted) {
+      const correct = prompted === result.rune;
+      report(
+        correct
+          ? runeById(result.rune).name + ' recognized.'
+          : runeById(result.rune).name +
+              ' detected — the target was ' +
+              runeById(prompted).name +
+              '.',
+        correct,
+        result.rune,
+      );
+      return;
+    }
+    if (state.combat && !state.combat.outcome) {
+      const cast = castSpell(state.combat, {
+        rune: result.rune,
+        at: state.combat.elapsed,
+      });
+      updateCombat(cast.state);
+      report(
+        cast.accepted
+          ? cast.state.message
+          : blockedSpellHint(
+              result.rune,
+              cast.reason,
+              state.combat.cooldowns[result.rune] || 0,
+            ),
+        cast.accepted,
+        result.rune,
+      );
+      if (cast.state.outcome && state.mode === 'study' && state.study)
+        updateStudy(finishDuel(state.study, cast.state));
+    }
+  };
+  useEffect(() => {
+    let raf = 0,
+      previous = performance.now(),
+      painted = 0;
+    const loop = (now: number) => {
+      const delta = now - previous;
+      previous = now;
+      const s = ctx.current;
+      if (s.combat && !s.combat.outcome && !s.paused) {
+        if (document.hidden || delta > 1000) pause('Game paused while away');
+        else if (!lastHandAt.current || now - lastHandAt.current > 1200)
+          pause('Hand tracking lost');
+        else {
+          const next = tickCombat(
+            s.combat,
+            delta,
+            s.mode === 'study' && s.study ? s.study.accuracy : s.accuracy,
+          );
+          if (next.message !== s.combat.message) {
+            addBattleEvent(next.message, next.elapsed);
+            setFeedback({
+              text: next.message,
+              success: next.player === s.combat.player,
+            });
+          }
+          ctx.current.combat = next;
+          if (now - painted > 80 || next.outcome) {
+            setCombat(next);
+            painted = now;
+          }
+          if (
+            next.outcome &&
+            s.mode === 'study' &&
+            s.study &&
+            s.study.status === 'duel'
+          )
+            updateStudy(finishDuel(s.study, next));
+        }
+      }
+      const canvas = canvasRef.current,
+        c = canvas?.getContext('2d');
+      if (canvas && c) {
+        const rect = canvas.getBoundingClientRect(),
+          dpr = Math.min(devicePixelRatio || 1, 2),
+          w = rect.width,
+          h = rect.height;
+        if (
+          canvas.width !== Math.round(w * dpr) ||
+          canvas.height !== Math.round(h * dpr)
+        ) {
+          canvas.width = Math.round(w * dpr);
+          canvas.height = Math.round(h * dpr);
+        }
+        c.setTransform(dpr, 0, 0, dpr, 0, 0);
+        c.clearRect(0, 0, w, h);
+        const dw = Math.min(w, h * aspect.current),
+          dh = dw / aspect.current,
+          ox = (w - dw) / 2,
+          oy = (h - dh) / 2;
+        const active =
+          s.mode === 'study' && s.study ? currentTarget(s.study) : s.target;
+        if (
+          (s.mode === 'practice' ||
+            (s.mode === 'study' && s.study?.status === 'practice')) &&
+          active &&
+          lastHandAt.current
+        ) {
+          const r = runeById(active),
+            size = Math.min(dw, dh) * 0.62;
+          c.beginPath();
+          r.points.forEach((p, i) => {
+            const x = w / 2 + (p.x - 0.5) * size,
+              y = h / 2 + (p.y - 0.5) * size;
+            i ? c.lineTo(x, y) : c.moveTo(x, y);
+          });
+          c.strokeStyle = r.color + '35';
+          c.lineWidth = 2;
+          c.setLineDash([5, 8]);
+          c.stroke();
+          c.setLineDash([]);
+        }
+        const pts = gate.current.points.length
+          ? gate.current.points
+          : now - lastTrailAt.current < 1300
+            ? lastTrail.current?.points || []
+            : [];
+        if (pts.length) {
+          c.beginPath();
+          pts.forEach((p, i) => {
+            const x = ox + (p.x / aspect.current) * dw,
+              y = oy + p.y * dh;
+            i ? c.lineTo(x, y) : c.moveTo(x, y);
+          });
+          c.strokeStyle = '#d3ffb3';
+          c.lineWidth = 3;
+          c.lineJoin = 'round';
+          c.lineCap = 'round';
+          c.shadowColor = '#bfff97';
+          c.shadowBlur = 12;
+          c.stroke();
+          c.shadowBlur = 0;
+        }
+        if (gate.current.cursor && !s.paused) {
+          const p = gate.current.cursor;
+          c.beginPath();
+          c.arc(
+            ox + (p.x / aspect.current) * dw,
+            oy + p.y * dh,
+            gate.current.state === 'drawing' ? 6 : 4,
+            0,
+            Math.PI * 2,
+          );
+          c.fillStyle =
+            gate.current.state === 'drawing' ? '#d6ffa9' : '#e8eee5';
+          c.fill();
+        }
+        const e = effect.current;
+        if (e && !s.paused)
+          paintCast(
+            c,
+            w,
+            h,
+            e,
+            now,
+            matchMedia('(prefers-reduced-motion: reduce)').matches,
+          );
+      }
+      raf = requestAnimationFrame(loop);
+    };
+    raf = requestAnimationFrame(loop);
+    const visibility = () => {
+      if (document.hidden) {
+        gate.current.interrupt(performance.now());
+        if (ctx.current.mode === 'pvp')
+          pvpRef.current.finishTrail('interrupted');
+        if (ctx.current.combat && !ctx.current.combat.outcome)
+          pause('Game paused while away');
+      }
+    };
+    document.addEventListener('visibilitychange', visibility);
+    return () => {
+      cancelAnimationFrame(raf);
+      document.removeEventListener('visibilitychange', visibility);
+    };
+  }, [pause, updateStudy, addBattleEvent]);
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (
+        e.target instanceof HTMLElement &&
+        ['INPUT', 'SELECT', 'TEXTAREA', 'BUTTON'].includes(e.target.tagName)
+      )
+        return;
+      if (e.code === 'Escape' || e.code === 'Space') {
+        if (ctx.current.combat && !ctx.current.combat.outcome) {
+          e.preventDefault();
+          pause('Paused');
+        }
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [pause]);
+  useEffect(() => {
+    if (
+      tracking.status === 'error' &&
+      ctx.current.combat &&
+      !ctx.current.combat.outcome
+    )
+      pause('Camera unavailable');
+  }, [tracking.status, pause]);
+  useEffect(() => {
+    const context = (
+      document as unknown as {
+        modelContext?: {
+          registerTool: (
+            tool: unknown,
+            options: { signal: AbortSignal },
+          ) => unknown;
+        };
+      }
+    ).modelContext;
+    if (!context) return;
+    const controller = new AbortController();
+    try {
+      Promise.resolve(
+        context.registerTool(
+          {
+            name: 'read_spellbound_session',
+            description:
+              'Read the current mode, camera state, and anonymous session progress. Does not expose frames or landmarks.',
+            inputSchema: {
+              type: 'object',
+              properties: {},
+              additionalProperties: false,
+            },
+            annotations: { readOnlyHint: true },
+            execute: (input: unknown) => {
+              if (
+                !input ||
+                typeof input !== 'object' ||
+                Object.keys(input).length
+              )
+                throw new Error('Expected an empty object');
+              const s = ctx.current;
+              return {
+                mode: s.mode,
+                paused: s.paused,
+                study: s.study
+                  ? {
+                      id: s.study.id,
+                      status: s.study.status,
+                      trials: s.study.trials.length,
+                    }
+                  : null,
+                duel: s.combat
+                  ? {
+                      player: s.combat.player,
+                      opponent: s.combat.opponent,
+                      outcome: s.combat.outcome,
+                    }
+                  : null,
+              };
+            },
+          },
+          { signal: controller.signal },
+        ),
+      ).catch(() => {});
+    } catch {}
+    return () => controller.abort();
+  }, []);
+  const startDuel = (condition: Condition, studySession = false) => {
+    void audio.current?.unlock();
+    const s = ctx.current.study;
+    const c = createCombat(
+      condition,
+      studySession && s ? s.accuracy : accuracy,
+    );
+    setBattleLog([{ text: c.message, at: 0 }]);
+    updateCombat(c);
+    setPaused(false);
+    ctx.current.paused = false;
+    gate.current.reset();
+    setFeedback(null);
+    if (studySession && s) updateStudy({ ...s, status: 'duel' });
+  };
+  const resume = () => {
+    if (tracking.status !== 'ready' || !tracked) return;
+    setPaused(false);
+    ctx.current.paused = false;
+    gate.current.reset();
+  };
+  const startStudy = () => {
+    const seed = sequence >>> 0;
+    updateStudy(
+      createStudy(
+        seed,
+        machine.trim() || 'Not documented',
+        navigator.userAgent,
+      ),
+    );
+    updateCombat(null);
+    gate.current.reset();
+    setFeedback(null);
+  };
+  const compatibleStudy = !study || isCurrentStudy(study);
+  const studyActive =
+    mode === 'study' && compatibleStudy && study?.status === 'duel';
+  const pvpActive =
+    mode === 'pvp' &&
+    !!pvp.state &&
+    ['countdown', 'active', 'paused'].includes(pvp.state.status);
+  const fighting = (mode === 'duel' || studyActive) && combat;
+  const selected =
+    mode === 'study' && study ? currentTarget(study) || target : target;
+  const rune = runeById(selected),
+    summary = study
+      ? summarize(study.trials.filter((t) => t.phase === 'measured'))
+      : null;
+  const ready = tracking.status === 'ready';
+  const heading =
+    mode === 'practice'
+      ? [
+          'Make your first mark.',
+          'Point to draw. Curl your index finger to cast.',
+        ]
+      : mode === 'duel'
+        ? ['Enter the circle.', 'Read the attack. Draw your answer.']
+        : mode === 'pvp'
+          ? [
+              'Challenge another spellcaster.',
+              'Create a private room and duel in real time.',
+            ]
+          : [
+              'Put the magic to the test.',
+              'Guided rune trials and two duel conditions.',
+            ];
+  return localizeTree(
+    <main
+      lang={locale}
+      className={'app-shell ' + (focusMode ? 'focus-mode' : '')}
+    >
+      <header className="topbar">
+        <a className="brand" href="/">
+          <Sparkles />
+          <span>
+            SPELLBOUND<small>THE WEBCAM GRIMOIRE</small>
+          </span>
+        </a>
+        <nav aria-label="Game modes">
+          {(['practice', 'duel', 'pvp', 'study'] as Mode[]).map((t) => (
+            <button
+              key={t}
+              disabled={
+                (!!studyActive && t !== 'study') || (pvpActive && t !== 'pvp')
+              }
+              aria-current={mode === t ? 'page' : undefined}
+              className={mode === t ? 'active' : ''}
+              onClick={() => switchMode(t)}
+            >
+              {t === 'pvp' ? 'PvP' : t[0].toUpperCase() + t.slice(1)}
+            </button>
+          ))}
+        </nav>
+        <div className="row">
+          <Button
+            variant="ghost"
+            aria-label={sound ? 'Mute sounds' : 'Enable sounds'}
+            onClick={() => {
+              void audio.current?.unlock();
+              setSound(!sound);
+            }}
+          >
+            {sound ? <Volume2 /> : <VolumeX />}
+          </Button>
+          <Button
+            variant="ghost"
+            aria-label="Camera settings"
+            aria-expanded={settings}
+            onClick={() => setSettings(!settings)}
+          >
+            <Settings2 />
+          </Button>
+        </div>
+      </header>
+      <div className="language-bar">
+        <div className="language-switch" role="group" aria-label="Language">
+          <button
+            type="button"
+            lang="en"
+            aria-pressed={locale === 'en'}
+            onClick={() => chooseLanguage('en')}
+          >
+            English
+          </button>
+          <button
+            type="button"
+            lang="th"
+            aria-pressed={locale === 'th'}
+            onClick={() => chooseLanguage('th')}
+          >
+            ไทย
+          </button>
+        </div>
+      </div>
+      <div className="workspace">
+        <section className="heading">
+          <div>
+            <p className="eyebrow">YOUR HAND IS THE WAND</p>
+            <h1>{heading[0]}</h1>
+            <p>{heading[1]}</p>
+          </div>
+          <span className="session-label">
+            <span className={ready ? 'live-dot' : 'idle-dot'} />{' '}
+            {ready ? 'CAMERA CONNECTED' : 'LOCAL SESSION'}
+          </span>
+        </section>
+        {storageError && (
+          <p role="alert" className="notice">
+            Browser storage is unavailable. Export your study before leaving
+            this page.
+          </p>
+        )}
+        {settings && (
+          <section className="settings-panel">
+            <div>
+              <h2>Camera setup</h2>
+              <p>
+                Use one hand in even light, with your palm facing the camera.
+                Keep the entire hand in frame. On a phone, prop it up with room
+                to move. Use Front camera to see yourself, or Back camera with
+                help positioning the phone. Both previews are mirrored. Mobile
+                performance is experimental.
+              </p>
+              <p>Frames stay on your device. No video or audio is recorded.</p>
+            </div>
+            <div className="row">
+              <Button
+                className="primary-action"
+                disabled={tracking.status === 'loading'}
+                onClick={() => beginCamera()}
+              >
+                <Camera />
+                {ready ? 'Restart camera' : 'Enable camera'}
+              </Button>
+              {ready && (
+                <Button variant="outline" onClick={stopCamera}>
+                  Stop camera
+                </Button>
+              )}
+            </div>
+          </section>
+        )}
+        {mode === 'practice' && !elementLesson && (
+          <section className="lesson-panel" aria-label="Guided first spell">
+            <div>
+              <p className="eyebrow">YOUR FIRST SPELL</p>
+              {lesson ? (
+                <>
+                  <h2>
+                    {lesson === 'arm'
+                      ? '1. Curl your index finger'
+                      : lesson === 'draw'
+                        ? '2. Point and draw a circle'
+                        : lesson === 'cast'
+                          ? '3. Curl and hold to cast'
+                          : 'You cast Ward!'}
+                  </h2>
+                  <p role="status">
+                    {!ready
+                      ? 'Enable your camera below to follow the lesson.'
+                      : !tracked
+                        ? 'Show your whole hand to the camera in even light.'
+                        : lesson === 'arm'
+                          ? 'Keep your palm facing the camera. Curl your index finger until the tracker is ready.'
+                          : lesson === 'draw'
+                            ? 'Extend your index finger, keeping the others curled. Wait for “Drawing”, then trace the circle guide.'
+                            : lesson === 'cast'
+                              ? 'Complete the circle, then curl your index finger and hold for about a third of a second.'
+                              : 'You are ready to explore the other seven runes or enter a duel.'}
+                  </p>
+                  <ol className="lesson-steps">
+                    {['Curl to prepare', 'Draw a circle', 'Curl to cast'].map(
+                      (text, i) => (
+                        <li
+                          key={text}
+                          aria-current={
+                            (['arm', 'draw', 'cast'] as const).indexOf(
+                              lesson as 'arm',
+                            ) === i
+                              ? 'step'
+                              : undefined
+                          }
+                        >
+                          {text}
+                        </li>
+                      ),
+                    )}
+                  </ol>
+                </>
+              ) : (
+                <>
+                  <h2>
+                    {lessonCompleted
+                      ? 'Keep your casting hand ready.'
+                      : 'Learn your first spell with the camera.'}
+                  </h2>
+                  <p>
+                    Follow three live steps. Tutorial attempts do not affect
+                    practice accuracy or study results.
+                  </p>
+                </>
+              )}
+            </div>
+            <div className="row">
+              {lesson ? (
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    updateLesson(null);
+                    gate.current.reset();
+                    setFeedback(null);
+                  }}
+                >
+                  {lesson === 'done' ? 'Continue practicing' : 'Exit tutorial'}
+                </Button>
+              ) : (
+                <Button variant="outline" onClick={startLesson}>
+                  {lessonCompleted ? 'Replay tutorial' : 'Start tutorial'}
+                </Button>
+              )}
+              {!lesson && (
+                <Button variant="outline" onClick={startElementLesson}>
+                  Learn Fire → Water
+                </Button>
+              )}
+            </div>
+          </section>
+        )}
+        {mode === 'practice' && elementLesson && (
+          <section
+            className="lesson-panel element-lesson"
+            aria-label="Fire and Water lesson"
+          >
+            <div>
+              <p className="eyebrow">FIRE → WATER LESSON</p>
+              <h2>
+                {elementLesson === 'fire'
+                  ? '1. Draw Fireball'
+                  : elementLesson === 'water'
+                    ? '2. Extinguish a practice burn'
+                    : 'Fire and Water mastered'}
+              </h2>
+              <p role="status">
+                {elementLesson === 'fire'
+                  ? 'Draw a triangle and curl your index finger. In a duel, Fireball ignites your opponent until they cast Water.'
+                  : elementLesson === 'water'
+                    ? 'Imagine you were hit by fire. Draw a rounded U and curl your index finger to cast Water on yourself.'
+                    : 'You learned both runes. Fire burns over time; Water extinguishes without healing.'}
+              </p>
+              <p>
+                No health is lost here. These attempts do not affect practice
+                scores or study results.
+              </p>
+              {!ready && <p>Enable your camera below to follow the lesson.</p>}
+            </div>
+            <div className="row">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  updateElementLesson(null);
+                  gate.current.reset();
+                  setFeedback(null);
+                }}
+              >
+                {elementLesson === 'done'
+                  ? 'Continue practicing'
+                  : 'Exit tutorial'}
+              </Button>
+            </div>
+          </section>
+        )}
+        {mode === 'practice' && !lesson && !elementLesson && (
+          <RuneCoach
+            locale={locale}
+            runeId={target}
+            accuracy={accuracy}
+            onSelect={(id) => {
+              gate.current.reset();
+              setTarget(id);
+              ctx.current.target = id;
+              setFeedback(null);
+              lastTrail.current = null;
+            }}
+          />
+        )}
+        <div className="casting-controls">
+          <Button
+            variant="outline"
+            aria-pressed={focusMode}
+            onClick={() => setFocusMode(!focusMode)}
+          >
+            {focusMode ? 'Exit large drawing view' : 'Larger drawing view'}
+          </Button>
+          <div className="row" aria-label="Camera direction">
+            <Button
+              variant="outline"
+              aria-pressed={facing === 'user'}
+              disabled={tracking.status === 'loading'}
+              onClick={() => beginCamera('user')}
+            >
+              Front camera
+            </Button>
+            <Button
+              variant="outline"
+              aria-pressed={facing === 'environment'}
+              disabled={tracking.status === 'loading'}
+              onClick={() => beginCamera('environment')}
+            >
+              Back camera
+            </Button>
+          </div>
+        </div>
+        {ready && (
+          <p className="framing-hint" role="status">
+            {framing}
+          </p>
+        )}
+        <div className="play-layout">
+          <section
+            className={
+              'arena ' + (fighting || mode === 'pvp' ? 'duel-arena' : '')
+            }
+          >
+            <div className="arena-top">
+              <span>
+                {mode === 'practice'
+                  ? 'PRACTICE CHAMBER'
+                  : mode === 'duel'
+                    ? 'THE ARCHIVIST'
+                    : mode === 'pvp'
+                      ? 'PLAYER VS PLAYER'
+                      : study?.id || 'GUIDED STUDY'}
+              </span>
+              <span>
+                {fighting
+                  ? combat!.condition.toUpperCase() + ' DIFFICULTY'
+                  : mode === 'pvp'
+                    ? (pvp.state?.status || 'LOBBY').toUpperCase()
+                    : mode === 'study' && study
+                      ? study.status.toUpperCase()
+                      : String(RUNE_IDS.indexOf(selected) + 1).padStart(
+                          2,
+                          '0',
+                        ) +
+                        ' / ' +
+                        String(RUNE_IDS.length).padStart(2, '0') +
+                        ' · ' +
+                        rune.name.toUpperCase()}
+              </span>
+            </div>
+            <div className="casting-surface">
+              <canvas
+                ref={canvasRef}
+                className="trail-canvas"
+                aria-label="Live fingertip drawing trail"
+              />
+              {!ready && mode !== 'pvp' ? (
+                <div className="arena-center setup-center">
+                  <div className="rune-halo">
+                    <RuneIcon id="ward" />
+                  </div>
+                  <p className="eyebrow">A LITTLE MAGIC STARTS HERE</p>
+                  <h2>
+                    {tracking.status === 'loading'
+                      ? 'Preparing your hand tracker…'
+                      : 'Bring your hand into play.'}
+                  </h2>
+                  <p>
+                    {tracking.status === 'loading'
+                      ? 'The first load may take a moment.'
+                      : tracking.error ||
+                        'Enable your camera to begin tracing spells.'}
+                  </p>
+                  <Button
+                    disabled={tracking.status === 'loading'}
+                    className="primary-action"
+                    onClick={() => beginCamera()}
+                  >
+                    <Camera />{' '}
+                    {tracking.status === 'loading'
+                      ? 'Loading…'
+                      : tracking.status === 'error'
+                        ? 'Retry camera'
+                        : 'Enable camera'}{' '}
+                    <ArrowUpRight />
+                  </Button>
+                  <small>Your camera stays on your device.</small>
+                </div>
+              ) : mode === 'pvp' ? (
+                <PvpPanel
+                  locale={locale}
+                  pvp={pvp}
+                  cameraReady={ready}
+                  tracked={tracked}
+                  onEnableCamera={() => beginCamera()}
+                />
+              ) : mode === 'practice' ? (
+                <div className="practice-prompt">
+                  <RuneIcon id={selected} />
+                  <div>
+                    <span className="eyebrow">
+                      DRAW A {rune.shape.toUpperCase()}
+                    </span>
+                    <h2>{rune.name}</h2>
+                  </div>
+                </div>
+              ) : mode === 'duel' && !combat ? (
+                <div className="arena-center setup-center">
+                  <div className="rune-halo">
+                    <Sparkles size={44} />
+                  </div>
+                  <p className="eyebrow">YOUR OPPONENT AWAITS</p>
+                  <h2>The Archivist</h2>
+                  <p>100 health. Eight spells. Keep your hand in view.</p>
+                  <div className="row">
+                    <Button
+                      className="primary-action"
+                      disabled={!tracked}
+                      onClick={() => startDuel('adaptive')}
+                    >
+                      Start adaptive duel <ArrowUpRight />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      disabled={!tracked}
+                      onClick={() => startDuel('fixed')}
+                    >
+                      Fixed difficulty
+                    </Button>
+                  </div>
+                  <small>
+                    {tracked
+                      ? 'Practice results set your adaptive counter windows.'
+                      : 'Show your hand to begin.'}
+                  </small>
+                </div>
+              ) : null}
+              {ready &&
+                mode === 'study' &&
+                (!study || study.status === 'complete' || !compatibleStudy) && (
+                  <div className="arena-center study-intro">
+                    <p className="eyebrow">
+                      {study
+                        ? !compatibleStudy
+                          ? 'GAME UPDATED'
+                          : 'SESSION COMPLETE'
+                        : 'GUIDED EVALUATION'}
+                    </p>
+                    <h2>
+                      {study
+                        ? !compatibleStudy
+                          ? 'Start fresh with the new spellbook.'
+                          : 'Your results are ready.'
+                        : 'A repeatable test of your runes.'}
+                    </h2>
+                    <p>16 practice strokes · 80 measured strokes · 2 duels</p>
+                    <label>
+                      Test device{' '}
+                      <input
+                        value={machine}
+                        onChange={(e) => setMachine(e.target.value)}
+                        placeholder="e.g. iPhone 15 / Windows laptop"
+                      />
+                    </label>
+                    <label>
+                      Participant sequence{' '}
+                      <input
+                        type="number"
+                        min="1"
+                        max="4294967295"
+                        value={sequence}
+                        onChange={(e) =>
+                          setSequence(
+                            Math.max(
+                              1,
+                              Math.min(4294967295, Number(e.target.value) || 1),
+                            ),
+                          )
+                        }
+                      />
+                    </label>
+                    <label className="check">
+                      <input
+                        type="checkbox"
+                        checked={consent}
+                        onChange={(e) => setConsent(e.target.checked)}
+                      />{' '}
+                      I agree to store anonymous results on this device.
+                    </label>
+                    <Button
+                      className="primary-action"
+                      disabled={!consent || !tracked}
+                      onClick={startStudy}
+                    >
+                      {study ? 'Start a new session' : 'Begin practice'}
+                    </Button>
+                    {study && (
+                      <small>
+                        Export this session below before starting another.
+                      </small>
+                    )}
+                  </div>
+                )}
+              {ready &&
+                mode === 'study' &&
+                compatibleStudy &&
+                study &&
+                ['practice', 'measured'].includes(study.status) && (
+                  <div className="practice-prompt">
+                    <RuneIcon id={selected} />
+                    <div>
+                      <span className="eyebrow">
+                        {study.status === 'practice'
+                          ? 'PRACTICE'
+                          : 'MEASURED TRIAL'}{' '}
+                        {study.trials.filter((t) => t.phase === study.status)
+                          .length + 1}{' '}
+                        /{' '}
+                        {study.status === 'practice'
+                          ? study.practiceOrder.length
+                          : study.order.length}
+                      </span>
+                      <h2>
+                        {rune.name} <small>{rune.shape}</small>
+                      </h2>
+                    </div>
+                  </div>
+                )}
+              {ready &&
+                mode === 'study' &&
+                compatibleStudy &&
+                study?.status === 'duel-ready' && (
+                  <div className="arena-center setup-center">
+                    <p className="eyebrow">
+                      DUEL {study.duels.length + 1} OF 2
+                    </p>
+                    <h2>
+                      {study.conditions[study.duels.length] === 'adaptive'
+                        ? 'Adaptive'
+                        : 'Fixed'}{' '}
+                      difficulty
+                    </h2>
+                    <p>
+                      {study.conditions[study.duels.length] === 'adaptive'
+                        ? 'Counter windows use your practice accuracy.'
+                        : 'Each attack starts with a four-second warning.'}
+                    </p>
+                    <Button
+                      className="primary-action"
+                      disabled={!tracked}
+                      onClick={() =>
+                        startDuel(study.conditions[study.duels.length], true)
+                      }
+                    >
+                      Begin duel
+                    </Button>
+                  </div>
+                )}
+              {fighting && (
+                <>
+                  <div className="health-display">
+                    <div>
+                      <span>
+                        YOU {combat!.shield && <Shield size={13} />}{' '}
+                        <b>{combat!.player}</b>
+                      </span>
+                      <meter
+                        value={combat!.player}
+                        min="0"
+                        max="100"
+                        aria-label="Player health"
+                      />
+                    </div>
+                    <div>
+                      <span>
+                        THE ARCHIVIST <b>{combat!.opponent}</b>
+                      </span>
+                      <meter
+                        className="enemy-health"
+                        value={combat!.opponent}
+                        min="0"
+                        max="100"
+                        aria-label="Opponent health"
+                      />
+                    </div>
+                  </div>
+                  <div className="burn-status">
+                    <span className={combat!.playerBurn ? 'on-fire' : ''}>
+                      {combat!.playerBurn
+                        ? 'You are burning: −4 health / second. Draw a U for Water.'
+                        : 'You: not burning'}
+                    </span>
+                    <span className={combat!.opponentBurn ? 'on-fire' : ''}>
+                      {combat!.opponentBurn
+                        ? 'Opponent burning: −4 health / second'
+                        : 'Opponent: not burning'}
+                    </span>
+                  </div>
+                  {combat!.opponentStun > 0 && (
+                    <div className="stun-status">
+                      <span>
+                        The Archivist is stunned —{' '}
+                        {(combat!.opponentStun / 1000).toFixed(1)}s
+                      </span>
+                    </div>
+                  )}
+                  <Opponent combat={combat!} paused={paused} />
+                  <div className="attack-prompt">
+                    <p className="eyebrow">
+                      {combat!.opponentStun > 0
+                        ? 'ENEMY STUNNED'
+                        : combat!.opponentWaterCast > 0
+                          ? 'CASTING WATER ON ITSELF'
+                          : combat!.phase === 'telegraph'
+                            ? 'INCOMING ATTACK'
+                            : combat!.phase === 'recovery'
+                              ? 'COUNTERATTACK NOW'
+                              : 'BARRIER ACTIVE'}
+                    </p>
+                    <h2>
+                      {combat!.opponentStun > 0
+                        ? 'The Archivist cannot act'
+                        : combat!.opponentWaterCast > 0
+                          ? 'The Archivist is extinguishing its burn'
+                          : combat!.phase === 'telegraph'
+                            ? PATTERNS[combat!.round % 3].name
+                            : combat!.phase === 'recovery'
+                              ? 'The Archivist is recovering'
+                              : 'Damage is halved'}
+                    </h2>
+                    <strong>
+                      {(
+                        (combat!.opponentStun ||
+                          combat!.opponentWaterCast ||
+                          combat!.remaining) / 1000
+                      ).toFixed(1)}
+                      <small>s</small>
+                    </strong>
+                    {combat!.phase === 'telegraph' &&
+                      !combat!.opponentWaterCast &&
+                      !combat!.opponentStun && (
+                        <p>
+                          Try{' '}
+                          {runeById(PATTERNS[combat!.round % 3].counter).name}
+                        </p>
+                      )}
+                  </div>
+                  <Button
+                    className="pause-button"
+                    variant="outline"
+                    onClick={() => pause('Paused')}
+                    disabled={!!combat!.outcome}
+                  >
+                    <Pause /> Pause
+                  </Button>
+                </>
+              )}
+              {fighting && paused && !combat!.outcome && (
+                <div className="arena-overlay">
+                  <Pause />
+                  <h2>{pauseReason}</h2>
+                  <p>
+                    {tracked
+                      ? 'Curl your index finger before resuming.'
+                      : 'Bring your hand back into view.'}
+                  </p>
+                  <Button
+                    className="primary-action"
+                    disabled={!ready || !tracked}
+                    onClick={resume}
+                  >
+                    <Play /> Resume
+                  </Button>
+                </div>
+              )}
+              {mode === 'duel' && combat?.outcome && (
+                <div className="arena-overlay">
+                  <Sparkles />
+                  <p className="eyebrow">DUEL COMPLETE</p>
+                  <h2>
+                    {combat.outcome === 'victory'
+                      ? 'The circle is yours.'
+                      : 'The Archivist prevails.'}
+                  </h2>
+                  <p>
+                    {combat.casts} spells cast ·{' '}
+                    {Math.round(combat.elapsed / 1000)} seconds
+                  </p>
+                  <DuelSummary stats={combat.stats} locale={locale} />
+                  <Button
+                    className="primary-action"
+                    onClick={() => updateCombat(null)}
+                  >
+                    <RotateCcw /> Play again
+                  </Button>
+                </div>
+              )}
+              {ready &&
+                mode === 'study' &&
+                compatibleStudy &&
+                study?.status === 'rating' && (
+                  <div className="arena-center ratings-panel">
+                    <p className="eyebrow">
+                      DUEL COMPLETE · {study.duels.at(-1)?.outcome}
+                    </p>
+                    <h2>How did that feel?</h2>
+                    <DuelSummary
+                      stats={study.duels.at(-1)?.stats}
+                      locale={locale}
+                    />
+                    {(['enjoyment', 'responsiveness', 'fatigue'] as const).map(
+                      (k) => (
+                        <label key={k}>
+                          {k[0].toUpperCase() + k.slice(1)}{' '}
+                          <select
+                            value={ratings[k]}
+                            onChange={(e) =>
+                              setRatings({
+                                ...ratings,
+                                [k]: Number(e.target.value),
+                              })
+                            }
+                          >
+                            {[1, 2, 3, 4, 5].map((v) => (
+                              <option key={v} value={v}>
+                                {v}
+                                {v === 1 ? ' — Low' : v === 5 ? ' — High' : ''}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                      ),
+                    )}
+                    <Button
+                      className="primary-action"
+                      onClick={() => {
+                        updateStudy(rateDuel(study, ratings));
+                        updateCombat(null);
+                        setRatings({
+                          enjoyment: 3,
+                          responsiveness: 3,
+                          fatigue: 3,
+                        });
+                      }}
+                    >
+                      Save ratings
+                    </Button>
+                  </div>
+                )}
+            </div>
+            {fighting && combat!.playerBurn && !paused && !combat!.outcome && (
+              <div className="burn-alert" role="status">
+                <RuneIcon id="water" />
+                <div>
+                  <strong>YOU ARE BURNING</strong>
+                  <p>Draw a rounded U → cast Water on yourself.</p>
+                  <small>
+                    Water stops the burn. Mend only restores health.
+                  </small>
+                </div>
+              </div>
+            )}
+            <div className="feedback-line" role="status" aria-live="polite">
+              {feedback ? (
+                <span className={feedback.success ? 'success' : 'error'}>
+                  {feedback.text}
+                </span>
+              ) : ready ? (
+                'Curl your index finger to arm, then point to draw. Curl it again and hold briefly to cast.'
+              ) : (
+                'Camera permission is required to cast.'
+              )}
+            </div>
+            <div className="arena-bottom">
+              <span>
+                <i className={tracked ? 'live-dot' : 'idle-dot'} />{' '}
+                {ready
+                  ? tracked
+                    ? gateState === 'drawing'
+                      ? 'Drawing — curl index to cast'
+                      : gateState === 'releasing'
+                        ? 'Hold index curled to cast…'
+                        : gateState === 'rearm'
+                          ? 'Curl index to arm'
+                          : 'Hand tracked'
+                    : gateState === 'recovering'
+                      ? 'Brief tracking gap — keeping your stroke'
+                      : 'No hand detected'
+                  : tracking.status === 'loading'
+                    ? 'Loading tracker…'
+                    : 'Camera off'}
+              </span>
+              <span>
+                {ready
+                  ? metrics.hz.toFixed(0) +
+                    ' Hz · ' +
+                    metrics.trail.toFixed(0) +
+                    ' ms trail'
+                  : 'POINT TO DRAW · CURL INDEX TO CAST'}
+              </span>
+            </div>
+          </section>
+          <aside className="side-panel">
+            <p className="eyebrow">
+              {ready ? 'YOUR CASTING HAND' : 'THE FIRST LESSON'}
+            </p>
+            <div
+              className={'camera-preview ' + (ready ? '' : 'camera-inactive')}
+            >
+              <video
+                ref={tracking.videoRef}
+                autoPlay
+                playsInline
+                muted
+                aria-label="Mirrored webcam preview"
+              />
+              {!ready && <CameraOff size={26} />}
+              <span>
+                {ready
+                  ? facing === 'environment'
+                    ? 'BACK · MIRRORED'
+                    : 'FRONT · MIRRORED'
+                  : 'CAMERA OFF'}
+              </span>
+            </div>
+            {ready ? (
+              <>
+                <h2>
+                  {mode === 'practice'
+                    ? rune.name
+                    : mode === 'duel'
+                      ? 'Keep your hand in view.'
+                      : mode === 'pvp'
+                        ? 'PvP spellcasting'
+                        : 'One stroke at a time.'}
+                </h2>
+                <p className="side-copy">
+                  {mode === 'practice'
+                    ? rune.effect +
+                      '. Trace the guide and curl your index finger to finish.'
+                    : mode === 'pvp'
+                      ? 'Your camera stays local. Active PvP shares normalized rune coordinates, never frames or landmarks.'
+                      : 'Point with your index finger to draw. Curl the other fingers. Curl your index finger to cast.'}
+                </p>
+                <div className="metrics">
+                  <div>
+                    <span>Tracking</span>
+                    <b>{metrics.hz.toFixed(1)} Hz</b>
+                  </div>
+                  <div>
+                    <span>Inference</span>
+                    <b>{metrics.inference.toFixed(0)} ms</b>
+                  </div>
+                  <div>
+                    <span>Frame → trail</span>
+                    <b>{metrics.trail.toFixed(0)} ms</b>
+                  </div>
+                  <div>
+                    <span>Release → cast</span>
+                    <b>
+                      {metrics.release === null
+                        ? '—'
+                        : metrics.release.toFixed(0) + ' ms'}
+                    </b>
+                  </div>
+                </div>
+                {mode === 'practice' && (
+                  <p className="tip">
+                    {accuracy[target].correct} / {accuracy[target].attempts}{' '}
+                    correct for {rune.name} in prompted practice.
+                  </p>
+                )}
+                <Button
+                  variant="outline"
+                  className="camera-stop"
+                  onClick={stopCamera}
+                >
+                  <CameraOff /> Stop camera
+                </Button>
+              </>
+            ) : (
+              <>
+                <h2>Trace. Release. Cast.</h2>
+                <ol className="lessons">
+                  {[
+                    [
+                      'Find your frame',
+                      'Keep one hand visible, with room to move.',
+                    ],
+                    [
+                      'Point to draw',
+                      'Extend your index finger. Curl the others.',
+                    ],
+                    [
+                      'Release the spell',
+                      'Curl your index finger when the rune is complete.',
+                    ],
+                  ].map(([t, p], i) => (
+                    <li key={t}>
+                      <b>0{i + 1}</b>
+                      <div>
+                        <strong>{t}</strong>
+                        <p>{p}</p>
+                      </div>
+                    </li>
+                  ))}
+                </ol>
+              </>
+            )}
+            {tracking.error && (
+              <p role="alert" className="error side-copy">
+                {tracking.error}
+              </p>
+            )}
+          </aside>
+        </div>
+        <section className="spellbook">
+          <div className="section-label">
+            <h2>Your spellbook</h2>
+            <span>
+              {mode === 'practice'
+                ? 'SELECT A RUNE TO PRACTICE'
+                : 'EIGHT RUNES. ONE HAND.'}
+            </span>
+          </div>
+          <div className="rune-grid">
+            {RUNES.map((r) => (
+              <button
+                className={'rune-card ' + (selected === r.id ? 'selected' : '')}
+                key={r.id}
+                aria-pressed={
+                  mode === 'practice' ? selected === r.id : undefined
+                }
+                disabled={
+                  mode !== 'practice' ||
+                  lesson !== null ||
+                  elementLesson !== null
+                }
+                onClick={() => {
+                  gate.current.reset();
+                  setTarget(r.id);
+                  ctx.current.target = r.id;
+                  setFeedback(null);
+                  lastTrail.current = null;
+                }}
+              >
+                <RuneIcon id={r.id} />
+                <strong>{r.name}</strong>
+                <small>{r.shape}</small>
+                <span className="rune-effect">{r.effect}</span>
+                {combat && (
+                  <div className="spell-availability">
+                    <span>{spellAvailability(combat, r.id)}</span>
+                    <progress
+                      max={r.cooldown}
+                      value={Math.max(
+                        0,
+                        r.cooldown - (combat.cooldowns[r.id] || 0),
+                      )}
+                      aria-label={r.name + ' cooldown recovery'}
+                    />
+                  </div>
+                )}
+              </button>
+            ))}
+          </div>
+        </section>
+        {combat && battleLog.length > 0 && (
+          <section className="battle-log" aria-label="Recent battle events">
+            <h2>Recent battle events</h2>
+            <ol>
+              {battleLog.map((event, i) => (
+                <li key={i}>
+                  <time>
+                    {Math.floor(event.at / 60000)}:
+                    {String(Math.floor(event.at / 1000) % 60).padStart(2, '0')}
+                  </time>
+                  <span>{event.text}</span>
+                </li>
+              ))}
+            </ol>
+          </section>
+        )}
+        {mode === 'study' && study && summary && (
+          <section className="results">
+            <div className="section-label">
+              <div>
+                <p className="eyebrow">{study.id} · SAVED ON THIS DEVICE</p>
+                <h2>Session results</h2>
+              </div>
+              <div className="row">
+                <Button
+                  variant="outline"
+                  onClick={() =>
+                    download(
+                      study.id + '.json',
+                      JSON.stringify({ ...study, summary }, null, 2),
+                      'application/json',
+                    )
+                  }
+                >
+                  <Download /> JSON
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() =>
+                    download(study.id + '.csv', studyCsv(study), 'text/csv')
+                  }
+                >
+                  <Download /> CSV
+                </Button>
+              </div>
+            </div>
+            <div className="result-numbers">
+              <div>
+                <b>
+                  {summary.total
+                    ? Math.round((summary.correct / summary.total) * 100) + '%'
+                    : '—'}
+                </b>
+                <span>Measured accuracy</span>
+              </div>
+              <div>
+                <b>
+                  {summary.total} / {study.order.length}
+                </b>
+                <span>Measured attempts</span>
+              </div>
+              <div>
+                <b>{summary.rejected}</b>
+                <span>Rejected attempts</span>
+              </div>
+              <div>
+                <b>{study.duels.length} / 2</b>
+                <span>Duels recorded</span>
+              </div>
+            </div>
+            <details>
+              <summary>Per-rune accuracy and confusion matrix</summary>
+              <div className="table-scroll">
+                <table>
+                  <caption>Rows: target rune · Columns: detected rune</caption>
+                  <thead>
+                    <tr>
+                      <th>Target</th>
+                      {RUNES.map((r) => (
+                        <th key={r.id}>{r.name}</th>
+                      ))}
+                      <th>Rejected</th>
+                      <th>Accuracy</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {RUNES.map((r) => (
+                      <tr key={r.id}>
+                        <th>{r.name}</th>
+                        {[...RUNE_IDS, 'rejected'].map((k) => (
+                          <td key={k}>{summary.matrix[r.id][k]}</td>
+                        ))}
+                        <td>
+                          {summary.accuracy[r.id].attempts
+                            ? Math.round(
+                                (summary.accuracy[r.id].correct /
+                                  summary.accuracy[r.id].attempts) *
+                                  100,
+                              ) + '%'
+                            : '—'}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </details>
+            <p className="side-copy">
+              Rejected strokes count as incorrect. Thresholds are fixed for this
+              version; pilot tuning and human evaluation are pending.
+            </p>
+            {study.status === 'duel' && (
+              <Button
+                variant="outline"
+                onClick={() => {
+                  if (combat) updateStudy(finishDuel(study, combat));
+                  updateCombat(null);
+                  setPaused(false);
+                }}
+              >
+                End duel early and record as aborted
+              </Button>
+            )}
+          </section>
+        )}
+        {lastResult && (
+          <details className="recognition-details">
+            <summary>Last recognition details</summary>
+            <p>
+              Match score: {lastResult.score.toFixed(3)} · Distance:{' '}
+              {lastResult.distance.toFixed(3)} · Runner-up:{' '}
+              {lastResult.runnerUpDistance.toFixed(3)} · Recognition:{' '}
+              {lastResult.recognitionMs.toFixed(1)} ms ·{' '}
+              {lastResult.reason || 'Accepted'}
+            </p>
+            <p>
+              A match score is a geometric similarity score, not a probability.
+            </p>
+          </details>
+        )}
+        <footer>
+          <span>WEBCAM MAGIC, NO EXTRA HARDWARE.</span>
+          <span>Research prototype · {RECOGNIZER_VERSION}</span>
+        </footer>
+      </div>
+    </main>,
+    locale,
+  );
 }
