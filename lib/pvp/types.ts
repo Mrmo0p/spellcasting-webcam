@@ -38,6 +38,7 @@ export type PvpPlayerState = {
   nextBurnAt: number | null;
   stunnedUntil: number | null;
   cooldowns: Partial<Record<RuneId, number>>;
+  globalCooldownUntil: number;
   ready: boolean;
   connected: boolean;
   reconnectUsed: boolean;

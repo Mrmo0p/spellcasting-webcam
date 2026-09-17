@@ -97,7 +97,10 @@ test('Thai covers training drills and dynamic results', () => {
     'Ward drill',
     'Mend drill',
     'Dummy burning',
+    'Disable cooldowns',
+    'No cooldown',
     'Star stunned the dummy for 3 seconds.',
+    'Your wand is recovering. Try again in a moment.',
   ])
     assert.notEqual(translate(text, 'th'), text);
   assert.match(translate('4 casts · 2 counters', 'th'), /4.*2/);
@@ -105,6 +108,7 @@ test('Thai covers training drills and dynamic results', () => {
     translate('Ember volley incoming — try Ward.', 'th'),
     /ห่าลูกไฟ.*เกราะเวท/,
   );
+  assert.match(translate('Wand recovery 0.4s', 'th'), /0.4/);
 });
 test('presentation localization preserves form values, refs and callbacks', () => {
   const callback = () => {},

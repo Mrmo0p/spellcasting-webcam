@@ -100,6 +100,12 @@ export const TH: Record<string, string> = {
   'Mend drill': 'ฝึกฟื้นฟู',
   'Water drill': 'ฝึกน้ำ',
   'Enable camera to cast': 'เปิดกล้องเพื่อร่ายเวท',
+  'Disable cooldowns': 'ปิดคูลดาวน์',
+  'Enable cooldowns': 'เปิดคูลดาวน์',
+  'No cooldown': 'ไม่มีคูลดาวน์',
+  'Training cooldowns enabled.': 'เปิดคูลดาวน์ในห้องฝึกแล้ว',
+  'Training cooldowns disabled — cast freely.':
+    'ปิดคูลดาวน์ในห้องฝึกแล้ว — ร่ายเวทได้อย่างอิสระ',
   Reset: 'เริ่มใหม่',
   'Choose a drill or draw any rune.': 'เลือกแบบฝึกหรือวาดรูนใดก็ได้',
   'Ward absorbed the training attack.': 'เกราะเวทป้องกันการโจมตีฝึกแล้ว',
@@ -178,6 +184,8 @@ export const TH: Record<string, string> = {
   'Attacks give your opponent four seconds to counter.':
     'การโจมตีให้เวลาคู่ต่อสู้สี่วินาทีเพื่อโต้กลับ',
   'PvP spell cooldowns': 'คูลดาวน์เวท PvP',
+  'Your wand is recovering. Try again in a moment.':
+    'ไม้กายสิทธิ์กำลังฟื้นตัว ลองอีกครั้งในอีกสักครู่',
   'Camera is off. The duel continues.': 'กล้องปิดอยู่ แต่การประลองยังดำเนินต่อ',
   'PvP spellcasting': 'การร่ายเวท PvP',
   'Your camera stays local. Only accepted rune events are sent to the match server.':
@@ -574,6 +582,10 @@ const patterns: [RegExp, (...parts: string[]) => string][] = [
   [
     /^(\d+) casts · (\d+) counters$/,
     (_, casts, counters) => `ร่าย ${casts} ครั้ง · ป้องกัน ${counters} ครั้ง`,
+  ],
+  [
+    /^Wand recovery (\d+(?:\.\d+)?)s$/,
+    (_, seconds) => `ไม้กายสิทธิ์ฟื้นตัว ${seconds} วิ`,
   ],
   [
     /^(.+) incoming — try (.+)\.$/,

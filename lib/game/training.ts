@@ -29,6 +29,7 @@ export type TrainingState = {
   stunned: number;
   incoming: TrainingIncoming | null;
   cooldowns: Partial<Record<RuneId, number>>;
+  cooldownsEnabled: boolean;
   casts: number;
   counters: number;
   resets: number;
@@ -51,6 +52,7 @@ export function createTraining(): TrainingState {
     stunned: 0,
     incoming: null,
     cooldowns: {},
+    cooldownsEnabled: true,
     casts: 0,
     counters: 0,
     resets: 0,
@@ -168,7 +170,7 @@ export function castTraining(
   state: TrainingState,
   rune: RuneId,
 ): { state: TrainingState; accepted: boolean; reason: string | null } {
-  if ((state.cooldowns[rune] || 0) > 0)
+  if (state.cooldownsEnabled && (state.cooldowns[rune] || 0) > 0)
     return { state, accepted: false, reason: 'cooldown' };
   if (rune === 'ward' && state.shield)
     return { state, accepted: false, reason: 'ward-active' };
@@ -211,7 +213,20 @@ export function castTraining(
     next.stunned = 3000;
     next.message = 'Star stunned the dummy for 3 seconds.';
   }
-  next.cooldowns[rune] = runeById(rune).cooldown;
+  if (next.cooldownsEnabled) next.cooldowns[rune] = runeById(rune).cooldown;
   restoreDummy(next);
   return { state: next, accepted: true, reason: null };
+}
+
+export function setTrainingCooldowns(
+  state: TrainingState,
+  enabled: boolean,
+): TrainingState {
+  const next = clone(state);
+  next.cooldownsEnabled = enabled;
+  if (!enabled) next.cooldowns = {};
+  next.message = enabled
+    ? 'Training cooldowns enabled.'
+    : 'Training cooldowns disabled — cast freely.';
+  return next;
 }

@@ -470,17 +470,19 @@ export class MatchRoom implements DurableObject {
   private castError(reason: string | null) {
     return reason === 'stunned'
       ? 'You are stunned and cannot cast yet.'
-      : reason === 'cooldown'
-        ? 'That rune is still cooling down.'
-        : reason === 'health-full'
-          ? 'Your health is already full.'
-          : reason === 'not-burning'
-            ? 'Water can only be cast while burning.'
-            : reason === 'no-incoming-attack'
-              ? 'That counter requires an incoming attack.'
-              : reason === 'ward-active'
-                ? 'Your Ward is already active.'
-                : 'That spell cannot be cast right now.';
+      : reason === 'global-cooldown'
+        ? 'Your wand is recovering. Try again in a moment.'
+        : reason === 'cooldown'
+          ? 'That rune is still cooling down.'
+          : reason === 'health-full'
+            ? 'Your health is already full.'
+            : reason === 'not-burning'
+              ? 'Water can only be cast while burning.'
+              : reason === 'no-incoming-attack'
+                ? 'That counter requires an incoming attack.'
+                : reason === 'ward-active'
+                  ? 'Your Ward is already active.'
+                  : 'That spell cannot be cast right now.';
   }
   private send(socket: WebSocket, message: ServerMessage) {
     try {

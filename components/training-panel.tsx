@@ -6,6 +6,7 @@ import {
   Shield,
   Snowflake,
   Sparkles,
+  TimerReset,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { localizeTree } from '@/lib/localize-tree';
@@ -26,6 +27,7 @@ export function TrainingPanel({
   onReset,
   cameraReady,
   onEnableCamera,
+  onToggleCooldowns,
 }: {
   locale: Locale;
   state: TrainingState;
@@ -35,6 +37,7 @@ export function TrainingPanel({
   onReset: () => void;
   cameraReady: boolean;
   onEnableCamera: () => void;
+  onToggleCooldowns: (enabled: boolean) => void;
 }) {
   const incoming = state.incoming ? TRAINING_ATTACKS[state.incoming.id] : null;
   return localizeTree(
@@ -133,6 +136,15 @@ export function TrainingPanel({
             <Camera /> Enable camera to cast
           </Button>
         )}
+        <Button
+          variant="outline"
+          className="training-cooldown-toggle"
+          aria-pressed={!state.cooldownsEnabled}
+          onClick={() => onToggleCooldowns(!state.cooldownsEnabled)}
+        >
+          <TimerReset />
+          {state.cooldownsEnabled ? 'Disable cooldowns' : 'Enable cooldowns'}
+        </Button>
         <Button variant="outline" onClick={() => onAttack('ember')}>
           <Shield /> Ward drill
         </Button>

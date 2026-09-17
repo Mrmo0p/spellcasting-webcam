@@ -9,6 +9,7 @@ import {
   joinPvpMatch,
   leavePvp,
   PVP,
+  PVP_COOLDOWNS,
   requestRematch,
   setPvpReady,
 } from '../lib/pvp/engine.ts';
@@ -85,7 +86,7 @@ void test('fire burns until Water and Mend does not extinguish', () => {
   s = castPvp(s, 'player2', 'mend', 9001).state;
   assert.equal(s.players.player2?.health, 100);
   assert.equal(s.players.player2?.burning, true);
-  s = castPvp(s, 'player2', 'water', 9002).state;
+  s = castPvp(s, 'player2', 'water', 9601).state;
   s = advancePvp(s, 12000);
   assert.equal(s.players.player2?.health, 100);
   assert.equal(s.players.player2?.burning, false);
@@ -96,6 +97,22 @@ void test('cooldowns and contextual casts are server enforced', () => {
   assert.equal(cast.accepted, true);
   cast = castPvp(cast.state, 'player1', 'lightning', 4001);
   assert.equal(cast.reason, 'cooldown');
+  assert.equal(
+    castPvp(cast.state, 'player1', 'ward', 4500).reason,
+    'global-cooldown',
+  );
+  assert.equal(castPvp(cast.state, 'player1', 'ward', 4600).accepted, true);
+  assert.equal(cast.state.players.player1?.cooldowns.lightning, 9000);
+  assert.deepEqual(PVP_COOLDOWNS, {
+    ward: 8000,
+    fireball: 7000,
+    lightning: 5000,
+    frost: 10000,
+    mend: 13000,
+    dispel: 11000,
+    water: 3000,
+    star: 15000,
+  });
   assert.equal(castPvp(s, 'player1', 'water', 4000).reason, 'not-burning');
   assert.equal(
     castPvp(s, 'player1', 'dispel', 4000).reason,
@@ -117,11 +134,13 @@ void test('disconnect pauses deadlines, reconnect shifts them, and grace expiry 
   let s = active();
   s = castPvp(s, 'player1', 'lightning', 4000).state;
   const before = s.incoming[0].landsAt;
+  const globalBefore = s.players.player1!.globalCooldownUntil;
   s = disconnectPvp(s, 'player2', 5000);
   assert.equal(s.status, 'paused');
   s = connectPvp(s, 'player2', 10000);
   assert.equal(s.status, 'active');
   assert.equal(s.incoming[0].landsAt, before + 5000);
+  assert.equal(s.players.player1?.globalCooldownUntil, globalBefore + 5000);
   s = disconnectPvp(s, 'player2', 11000);
   s = advancePvp(s, 11000 + PVP.repeatReconnectGrace);
   assert.equal(s.outcome, 'player1');

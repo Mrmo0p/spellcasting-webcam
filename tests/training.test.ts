@@ -6,6 +6,7 @@ import {
   damageTrainingPlayer,
   igniteTrainingPlayer,
   queueTrainingAttack,
+  setTrainingCooldowns,
   tickTraining,
 } from '../lib/game/training.ts';
 
@@ -48,4 +49,14 @@ void test('training is nonlethal and restores a defeated dummy', () => {
   state = castTraining(state, 'lightning').state;
   assert.equal(state.dummy, 100);
   assert.equal(state.resets, 1);
+});
+
+void test('training cooldowns can be disabled without changing game cooldowns', () => {
+  let state = setTrainingCooldowns(createTraining(), false);
+  state = castTraining(state, 'lightning').state;
+  const second = castTraining(state, 'lightning');
+  assert.equal(second.accepted, true);
+  assert.deepEqual(second.state.cooldowns, {});
+  state = setTrainingCooldowns(second.state, true);
+  assert.equal(state.cooldownsEnabled, true);
 });

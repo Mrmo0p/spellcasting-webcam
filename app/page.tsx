@@ -76,6 +76,7 @@ import {
   damageTrainingPlayer,
   igniteTrainingPlayer,
   queueTrainingAttack,
+  setTrainingCooldowns,
   tickTraining,
   type TrainingAttackId,
   type TrainingState,
@@ -132,6 +133,9 @@ export default function Home() {
     pvpRef = useRef(pvp);
   pvpRef.current = pvp;
   const remoteAudioStroke = useRef('');
+  const onPvpCooldownReady = useCallback((rune: RuneId) => {
+    audio.current?.ready(RUNE_IDS.indexOf(rune));
+  }, []);
   const [mode, setMode] = useState<Mode>('practice'),
     [target, setTarget] = useState<RuneId>('ward'),
     [accuracy, setAccuracy] = useState<Accuracy>(blankAccuracy),
@@ -1334,6 +1338,7 @@ export default function Home() {
                   cameraReady={ready}
                   tracked={tracked}
                   onEnableCamera={() => beginCamera()}
+                  onCooldownReady={onPvpCooldownReady}
                 />
               ) : mode === 'training' && training ? (
                 <TrainingPanel
@@ -1345,6 +1350,9 @@ export default function Home() {
                   onReset={() => applyTraining(createTraining())}
                   cameraReady={ready}
                   onEnableCamera={() => beginCamera()}
+                  onToggleCooldowns={(enabled) =>
+                    applyTraining(setTrainingCooldowns(training, enabled))
+                  }
                 />
               ) : mode === 'practice' ? (
                 <div className="practice-prompt">
@@ -1913,10 +1921,13 @@ export default function Home() {
                     <span>
                       {combat
                         ? spellAvailability(combat, r.id)
-                        : (training!.cooldowns[r.id] || 0) > 0
-                          ? Math.ceil((training!.cooldowns[r.id] || 0) / 1000) +
-                            's'
-                          : 'Ready'}
+                        : training && !training.cooldownsEnabled
+                          ? 'No cooldown'
+                          : (training!.cooldowns[r.id] || 0) > 0
+                            ? Math.ceil(
+                                (training!.cooldowns[r.id] || 0) / 1000,
+                              ) + 's'
+                            : 'Ready'}
                     </span>
                     <progress
                       max={r.cooldown}

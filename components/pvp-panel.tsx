@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Camera,
   Copy,
@@ -16,6 +16,7 @@ import { RUNES, runeById } from '@/lib/game/runes';
 import { otherSlot } from '@/lib/pvp/engine';
 import type { PvpController } from '@/hooks/use-pvp';
 import { PvpArena } from '@/components/pvp-arena';
+import type { RuneId } from '@/lib/game/types';
 
 function RuneMark({ id }: { id: 'fireball' | 'lightning' }) {
   const rune = runeById(id);
@@ -43,18 +44,21 @@ export function PvpPanel({
   cameraReady,
   tracked,
   onEnableCamera,
+  onCooldownReady,
 }: {
   locale: Locale;
   pvp: PvpController;
   cameraReady: boolean;
   tracked: boolean;
   onEnableCamera: () => void;
+  onCooldownReady: (rune: RuneId) => void;
 }) {
   const [name, setName] = useState(''),
     [code, setCode] = useState(''),
     [busy, setBusy] = useState(false),
     [formError, setFormError] = useState(''),
     [now, setNow] = useState(0);
+  const previousCooldowns = useRef<Set<RuneId> | null>(null);
   useEffect(() => {
     let active = true;
     queueMicrotask(() => {
@@ -79,7 +83,23 @@ export function PvpPanel({
     me = state && pvp.slot ? state.players[pvp.slot] : null,
     opponent = state && pvp.slot ? state.players[otherSlot(pvp.slot)] : null;
   const meStun = Math.max(0, (me?.stunnedUntil || 0) - serverNow),
-    opponentStun = Math.max(0, (opponent?.stunnedUntil || 0) - serverNow);
+    opponentStun = Math.max(0, (opponent?.stunnedUntil || 0) - serverNow),
+    globalRemaining = Math.max(0, (me?.globalCooldownUntil || 0) - serverNow);
+  useEffect(() => {
+    if (!me || state?.status !== 'active') {
+      previousCooldowns.current = null;
+      return;
+    }
+    const current = new Set(
+      RUNES.filter((rune) => (me.cooldowns[rune.id] || 0) > serverNow).map(
+        (rune) => rune.id,
+      ),
+    );
+    if (previousCooldowns.current)
+      for (const rune of previousCooldowns.current)
+        if (!current.has(rune)) onCooldownReady(rune);
+    previousCooldowns.current = current;
+  }, [me, onCooldownReady, serverNow, state?.status]);
   const incoming = useMemo(
     () =>
       state && pvp.slot
@@ -422,13 +442,29 @@ export function PvpPanel({
             (me.cooldowns[rune.id] || 0) - serverNow,
           );
           return (
-            <span key={rune.id} className={remaining ? 'cooling' : ''}>
+            <span
+              key={rune.id}
+              className={
+                remaining
+                  ? remaining <= 3000
+                    ? 'cooling nearly-ready'
+                    : 'cooling'
+                  : 'ready'
+              }
+            >
               <b>{rune.name}</b>
-              {remaining ? (remaining / 1000).toFixed(1) + 's' : 'Ready'}
+              <em>
+                {remaining ? (remaining / 1000).toFixed(1) + 's' : 'Ready'}
+              </em>
             </span>
           );
         })}
       </div>
+      {globalRemaining > 0 && (
+        <output className="pvp-global-cooldown">
+          Wand recovery {(globalRemaining / 1000).toFixed(1)}s
+        </output>
+      )}
       {!cameraReady && (
         <div className="pvp-camera-warning">
           <span>Camera is off. The duel continues.</span>

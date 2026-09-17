@@ -27,6 +27,25 @@ export class SpellAudio {
     o.start();
     o.stop(c.currentTime + 0.32);
   }
+  ready(index = 0) {
+    if (!this.enabled || !this.context || this.context.state !== 'running')
+      return;
+    const c = this.context,
+      o = c.createOscillator(),
+      g = c.createGain();
+    o.connect(g);
+    g.connect(c.destination);
+    o.type = 'sine';
+    o.frequency.setValueAtTime(620 + index * 24, c.currentTime);
+    o.frequency.exponentialRampToValueAtTime(
+      930 + index * 24,
+      c.currentTime + 0.12,
+    );
+    g.gain.setValueAtTime(0.035, c.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, c.currentTime + 0.2);
+    o.start();
+    o.stop(c.currentTime + 0.22);
+  }
   trailHum(intensity: number) {
     if (!this.enabled || !this.context || this.context.state !== 'running')
       return;
