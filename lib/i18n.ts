@@ -73,6 +73,54 @@ export const TH: Record<string, string> = {
     'ฝึก 14 ครั้ง · ทดสอบ 70 ครั้ง · ประลอง 2 รอบ',
   'GAME UPDATED': 'อัปเดตเกมแล้ว',
   'Start fresh with the new spellbook.': 'เริ่มใหม่ด้วยคัมภีร์เวทฉบับใหม่',
+  Training: 'ฝึกต่อสู้',
+  'Master every spell.': 'ฝึกฝนเวททุกชนิด',
+  'Choose a drill, then draw the matching rune.': 'เลือกแบบฝึก แล้ววาดรูนที่เหมาะสม',
+  'TRAINING SANCTUM': 'ห้องฝึกเวท',
+  'SAFE SANDBOX · NO SCORES SAVED': 'สนามฝึกปลอดภัย · ไม่บันทึกคะแนน',
+  'Training dummy': 'หุ่นฝึกเวท',
+  'Free-cast every rune or choose a drill for Ward, Frost, Dispel, Mend, and Water. Nothing is saved.':
+    'ร่ายรูนใดก็ได้ หรือเลือกฝึกเกราะเวท น้ำแข็ง สลายเวท ฟื้นฟู และน้ำ โดยจะไม่บันทึกผล',
+  'ALL RUNES AVAILABLE · RESULTS ARE NOT SAVED': 'ใช้รูนได้ทุกชนิด · ไม่บันทึกผลการฝึก',
+  'TRAINING DUMMY': 'หุ่นฝึกเวท',
+  'Training dummy health': 'พลังชีวิตหุ่นฝึก',
+  'INCOMING TRAINING ATTACK': 'การโจมตีฝึกกำลังมา',
+  'DUMMY STUNNED': 'หุ่นฝึกมึนงง',
+  'FREE CASTING': 'ร่ายเวทอิสระ',
+  'Star stun active': 'ดาวกำลังทำให้มึนงง',
+  'Draw any rune': 'วาดรูนใดก็ได้',
+  'You are burning — draw Water.': 'คุณกำลังติดไฟ — วาดรูนน้ำ',
+  'You: safe': 'คุณ: ปลอดภัย',
+  'Dummy burning': 'หุ่นฝึกกำลังติดไฟ',
+  'Dummy: ready': 'หุ่นฝึก: พร้อม',
+  'Training drills': 'แบบฝึกเวท',
+  'Ward drill': 'ฝึกเกราะเวท',
+  'Dispel drill': 'ฝึกสลายเวท',
+  'Frost drill': 'ฝึกน้ำแข็ง',
+  'Mend drill': 'ฝึกฟื้นฟู',
+  'Water drill': 'ฝึกน้ำ',
+  'Enable camera to cast': 'เปิดกล้องเพื่อร่ายเวท',
+  Reset: 'เริ่มใหม่',
+  'Choose a drill or draw any rune.': 'เลือกแบบฝึกหรือวาดรูนใดก็ได้',
+  'Ward absorbed the training attack.': 'เกราะเวทป้องกันการโจมตีฝึกแล้ว',
+  'Dummy defeated — target restored to full health.':
+    'เอาชนะหุ่นฝึกแล้ว — ฟื้นพลังเป้าหมายเต็ม',
+  'Training damage applied — draw Mend.': 'ได้รับความเสียหายฝึก — วาดรูนฟื้นฟู',
+  'Training burn applied — draw Water.': 'ติดไฟฝึก — วาดรูนน้ำ',
+  'You take 4 training burn damage. Draw Water.':
+    'คุณเสียพลังชีวิต 4 จากไฟฝึก วาดรูนน้ำ',
+  'The dummy takes 4 burn damage.': 'หุ่นฝึกเสียพลังชีวิต 4 จากไฟเผา',
+  'Ward prepared. It will block the next training attack.':
+    'เตรียมเกราะเวทแล้ว จะป้องกันการโจมตีฝึกครั้งถัดไป',
+  'Fireball hit for 8 and ignited the dummy.':
+    'ลูกไฟสร้างความเสียหาย 8 และทำให้หุ่นฝึกติดไฟ',
+  'Lightning hit the dummy for 16.': 'สายฟ้าสร้างความเสียหาย 16 แก่หุ่นฝึก',
+  'Frost delayed the training attack by 3 seconds.':
+    'น้ำแข็งทำให้การโจมตีฝึกช้าลง 3 วินาที',
+  'Dispel cancelled the training attack.': 'สลายเวทยกเลิกการโจมตีฝึกแล้ว',
+  'Mend restored up to 22 health.': 'ฟื้นฟูพลังชีวิตสูงสุด 22',
+  'Water extinguished your training burn.': 'น้ำดับไฟฝึกของคุณแล้ว',
+  'Star stunned the dummy for 3 seconds.': 'ดาวทำให้หุ่นฝึกมึนงง 3 วินาที',
   PvP: 'ผู้เล่นปะทะผู้เล่น',
   'Challenge another spellcaster.': 'ท้าประลองกับจอมเวทคนอื่น',
   'Create a private room and duel in real time.':
@@ -523,6 +571,18 @@ const lookup = (key: string): string | undefined =>
       : undefined;
 const name = (s: string) => lookup(s) ?? s;
 const patterns: [RegExp, (...parts: string[]) => string][] = [
+  [
+    /^(\d+) casts · (\d+) counters$/,
+    (_, casts, counters) => `ร่าย ${casts} ครั้ง · ป้องกัน ${counters} ครั้ง`,
+  ],
+  [
+    /^(.+) incoming — try (.+)\.$/,
+    (_, attack, counter) => `${name(attack)}กำลังมา — ลองใช้${name(counter)}`,
+  ],
+  [
+    /^(.+) landed for (\d+)\.$/,
+    (_, attack, damage) => `${name(attack)}สร้างความเสียหาย ${damage}`,
+  ],
   [
     /^(.+) recognized, but still cooling down\. Wait about (\d+) seconds, then draw it again\.$/,
     (_, n, s) => `ตรวจพบ${name(n)} แต่ยังคูลดาวน์อยู่ รอประมาณ ${s} วินาทีแล้ววาดอีกครั้ง`,

@@ -90,6 +90,22 @@ test('Thai covers the PvP lobby, match state and dynamic player events', () => {
   assert.equal(translate('12 seconds remaining', 'th'), 'เหลือ 12 วินาที');
   assert.equal(translate('Niran wins.', 'th'), 'Niran ชนะ');
 });
+test('Thai covers training drills and dynamic results', () => {
+  for (const text of [
+    'Training',
+    'TRAINING SANCTUM',
+    'Ward drill',
+    'Mend drill',
+    'Dummy burning',
+    'Star stunned the dummy for 3 seconds.',
+  ])
+    assert.notEqual(translate(text, 'th'), text);
+  assert.match(translate('4 casts · 2 counters', 'th'), /4.*2/);
+  assert.match(
+    translate('Ember volley incoming — try Ward.', 'th'),
+    /ห่าลูกไฟ.*เกราะเวท/,
+  );
+});
 test('presentation localization preserves form values, refs and callbacks', () => {
   const callback = () => {},
     ref = { current: null };

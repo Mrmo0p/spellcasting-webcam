@@ -69,8 +69,19 @@ import { DuelSummary } from '@/components/duel-summary';
 import { SpellAudio } from '@/lib/game/audio';
 import { usePvp } from '@/hooks/use-pvp';
 import { PvpPanel } from '@/components/pvp-panel';
+import { TrainingPanel } from '@/components/training-panel';
+import {
+  castTraining,
+  createTraining,
+  damageTrainingPlayer,
+  igniteTrainingPlayer,
+  queueTrainingAttack,
+  tickTraining,
+  type TrainingAttackId,
+  type TrainingState,
+} from '@/lib/game/training';
 
-type Mode = 'practice' | 'duel' | 'pvp' | 'study';
+type Mode = 'practice' | 'training' | 'duel' | 'pvp' | 'study';
 type Metrics = {
   hz: number;
   inference: number;
@@ -126,6 +137,7 @@ export default function Home() {
     [accuracy, setAccuracy] = useState<Accuracy>(blankAccuracy),
     [study, setStudy] = useState<Study | null>(null),
     [combat, setCombat] = useState<CombatState | null>(null),
+    [training, setTraining] = useState<TrainingState | null>(null),
     [paused, setPaused] = useState(false),
     [pauseReason, setPauseReason] = useState(''),
     [sound, setSound] = useState(true),
@@ -204,8 +216,16 @@ export default function Home() {
     nextTrialAt = useRef(0),
     aspect = useRef(4 / 3),
     metricsRef = useRef(initialMetrics);
-  const ctx = useRef({ mode, target, accuracy, study, combat, paused });
-  ctx.current = { mode, target, accuracy, study, combat, paused };
+  const ctx = useRef({
+    mode,
+    target,
+    accuracy,
+    study,
+    combat,
+    training,
+    paused,
+  });
+  ctx.current = { mode, target, accuracy, study, combat, training, paused };
   const strokeHandler = useRef<(stroke: Stroke) => void>(() => {});
   const updateStudy = useCallback((s: Study) => {
     ctx.current.study = s;
@@ -215,6 +235,10 @@ export default function Home() {
   const updateCombat = useCallback((c: CombatState | null) => {
     ctx.current.combat = c;
     setCombat(c);
+  }, []);
+  const updateTraining = useCallback((next: TrainingState | null) => {
+    ctx.current.training = next;
+    setTraining(next);
   }, []);
   const pause = useCallback((reason: string) => {
     ctx.current.paused = true;
@@ -321,7 +345,10 @@ export default function Home() {
     }
   }, [pvp.remoteTrail, sound]);
   const beginCamera = (camera: 'user' | 'environment' = facing) => {
-    if (ctx.current.combat && !ctx.current.combat.outcome)
+    if (
+      (ctx.current.combat && !ctx.current.combat.outcome) ||
+      (ctx.current.training && tracking.status === 'ready')
+    )
       pause('Camera changed — resume when your hand is visible');
     pvpRef.current.finishTrail('interrupted');
     setFacing(camera);
@@ -341,7 +368,10 @@ export default function Home() {
     void tracking.start(camera);
   };
   const stopCamera = () => {
-    if (ctx.current.combat && !ctx.current.combat.outcome)
+    if (
+      (ctx.current.combat && !ctx.current.combat.outcome) ||
+      ctx.current.training
+    )
       pause('Camera stopped');
     pvpRef.current.finishTrail('interrupted');
     tracking.stop();
@@ -364,6 +394,7 @@ export default function Home() {
     gate.current.reset();
     lastTrail.current = null;
     updateCombat(null);
+    updateTraining(next === 'training' ? createTraining() : null);
     setPaused(false);
     ctx.current.paused = false;
     setFeedback(null);
@@ -387,6 +418,8 @@ export default function Home() {
   const report = (text: string, success: boolean, rune: RuneId | null) => {
     setFeedback({ text, success });
     if (ctx.current.combat) addBattleEvent(text, ctx.current.combat.elapsed);
+    else if (ctx.current.training)
+      addBattleEvent(text, ctx.current.training.elapsed);
     effect.current = {
       at: performance.now(),
       color: rune ? runeById(rune).color : '#ed9c89',
@@ -409,6 +442,7 @@ export default function Home() {
       return;
     if (state.mode === 'pvp' && pvpRef.current.state?.status !== 'active')
       return;
+    if (state.mode === 'training' && !state.training) return;
     const result = recognize(stroke),
       now = performance.now(),
       pvpStrokeId =
@@ -532,6 +566,22 @@ export default function Home() {
       );
       return;
     }
+    if (state.mode === 'training' && state.training) {
+      const cast = castTraining(state.training, result.rune);
+      updateTraining(cast.state);
+      report(
+        cast.accepted
+          ? cast.state.message
+          : blockedSpellHint(
+              result.rune,
+              cast.reason,
+              state.training.cooldowns[result.rune] || 0,
+            ),
+        cast.accepted,
+        result.rune,
+      );
+      return;
+    }
     if (prompted) {
       const correct = prompted === result.rune;
       report(
@@ -606,6 +656,27 @@ export default function Home() {
             updateStudy(finishDuel(s.study, next));
         }
       }
+      if (s.training && !s.paused && lastHandAt.current) {
+        if (document.hidden || delta > 1000)
+          pause('Training paused while away');
+        else if (!lastHandAt.current || now - lastHandAt.current > 1200)
+          pause('Hand tracking lost');
+        else {
+          const next = tickTraining(s.training, delta);
+          if (next.message !== s.training.message) {
+            addBattleEvent(next.message, next.elapsed);
+            setFeedback({
+              text: next.message,
+              success: next.player === s.training.player,
+            });
+          }
+          ctx.current.training = next;
+          if (now - painted > 80) {
+            setTraining(next);
+            painted = now;
+          }
+        }
+      }
       const canvas = canvasRef.current,
         c = canvas?.getContext('2d');
       if (canvas && c) {
@@ -640,7 +711,8 @@ export default function Home() {
           r.points.forEach((p, i) => {
             const x = w / 2 + (p.x - 0.5) * size,
               y = h / 2 + (p.y - 0.5) * size;
-            i ? c.lineTo(x, y) : c.moveTo(x, y);
+            if (i) c.lineTo(x, y);
+            else c.moveTo(x, y);
           });
           c.strokeStyle = r.color + '35';
           c.lineWidth = 2;
@@ -658,7 +730,8 @@ export default function Home() {
           pts.forEach((p, i) => {
             const x = ox + (p.x / aspect.current) * dw,
               y = oy + p.y * dh;
-            i ? c.lineTo(x, y) : c.moveTo(x, y);
+            if (i) c.lineTo(x, y);
+            else c.moveTo(x, y);
           });
           c.strokeStyle = '#d3ffb3';
           c.lineWidth = 3;
@@ -702,7 +775,10 @@ export default function Home() {
         gate.current.interrupt(performance.now());
         if (ctx.current.mode === 'pvp')
           pvpRef.current.finishTrail('interrupted');
-        if (ctx.current.combat && !ctx.current.combat.outcome)
+        if (
+          (ctx.current.combat && !ctx.current.combat.outcome) ||
+          ctx.current.training
+        )
           pause('Game paused while away');
       }
     };
@@ -720,7 +796,10 @@ export default function Home() {
       )
         return;
       if (e.code === 'Escape' || e.code === 'Space') {
-        if (ctx.current.combat && !ctx.current.combat.outcome) {
+        if (
+          (ctx.current.combat && !ctx.current.combat.outcome) ||
+          ctx.current.training
+        ) {
           e.preventDefault();
           pause('Paused');
         }
@@ -732,8 +811,8 @@ export default function Home() {
   useEffect(() => {
     if (
       tracking.status === 'error' &&
-      ctx.current.combat &&
-      !ctx.current.combat.outcome
+      ((ctx.current.combat && !ctx.current.combat.outcome) ||
+        ctx.current.training)
     )
       pause('Camera unavailable');
   }, [tracking.status, pause]);
@@ -812,6 +891,16 @@ export default function Home() {
     setFeedback(null);
     if (studySession && s) updateStudy({ ...s, status: 'duel' });
   };
+  const applyTraining = (next: TrainingState) => {
+    updateTraining(next);
+    setFeedback({ text: next.message, success: true });
+    addBattleEvent(next.message, next.elapsed);
+    gate.current.reset();
+  };
+  const startTrainingAttack = (id: TrainingAttackId) => {
+    if (ctx.current.training)
+      applyTraining(queueTrainingAttack(ctx.current.training, id));
+  };
   const resume = () => {
     if (tracking.status !== 'ready' || !tracked) return;
     setPaused(false);
@@ -839,6 +928,7 @@ export default function Home() {
     !!pvp.state &&
     ['countdown', 'active', 'paused'].includes(pvp.state.status);
   const fighting = (mode === 'duel' || studyActive) && combat;
+  const trainingActive = mode === 'training' && training;
   const selected =
     mode === 'study' && study ? currentTarget(study) || target : target;
   const rune = runeById(selected),
@@ -852,17 +942,22 @@ export default function Home() {
           'Make your first mark.',
           'Point to draw. Curl your index finger to cast.',
         ]
-      : mode === 'duel'
-        ? ['Enter the circle.', 'Read the attack. Draw your answer.']
-        : mode === 'pvp'
-          ? [
-              'Challenge another spellcaster.',
-              'Create a private room and duel in real time.',
-            ]
-          : [
-              'Put the magic to the test.',
-              'Guided rune trials and two duel conditions.',
-            ];
+      : mode === 'training'
+        ? [
+            'Master every spell.',
+            'Choose a drill, then draw the matching rune.',
+          ]
+        : mode === 'duel'
+          ? ['Enter the circle.', 'Read the attack. Draw your answer.']
+          : mode === 'pvp'
+            ? [
+                'Challenge another spellcaster.',
+                'Create a private room and duel in real time.',
+              ]
+            : [
+                'Put the magic to the test.',
+                'Guided rune trials and two duel conditions.',
+              ];
   return localizeTree(
     <main
       lang={locale}
@@ -876,19 +971,21 @@ export default function Home() {
           </span>
         </a>
         <nav aria-label="Game modes">
-          {(['practice', 'duel', 'pvp', 'study'] as Mode[]).map((t) => (
-            <button
-              key={t}
-              disabled={
-                (!!studyActive && t !== 'study') || (pvpActive && t !== 'pvp')
-              }
-              aria-current={mode === t ? 'page' : undefined}
-              className={mode === t ? 'active' : ''}
-              onClick={() => switchMode(t)}
-            >
-              {t === 'pvp' ? 'PvP' : t[0].toUpperCase() + t.slice(1)}
-            </button>
-          ))}
+          {(['practice', 'training', 'duel', 'pvp', 'study'] as Mode[]).map(
+            (t) => (
+              <button
+                key={t}
+                disabled={
+                  (!!studyActive && t !== 'study') || (pvpActive && t !== 'pvp')
+                }
+                aria-current={mode === t ? 'page' : undefined}
+                className={mode === t ? 'active' : ''}
+                onClick={() => switchMode(t)}
+              >
+                {t === 'pvp' ? 'PvP' : t[0].toUpperCase() + t.slice(1)}
+              </button>
+            ),
+          )}
         </nav>
         <div className="row">
           <Button
@@ -1157,34 +1254,39 @@ export default function Home() {
         <div className="play-layout">
           <section
             className={
-              'arena ' + (fighting || mode === 'pvp' ? 'duel-arena' : '')
+              'arena ' +
+              (fighting || trainingActive || mode === 'pvp' ? 'duel-arena' : '')
             }
           >
             <div className="arena-top">
               <span>
                 {mode === 'practice'
                   ? 'PRACTICE CHAMBER'
-                  : mode === 'duel'
-                    ? 'THE ARCHIVIST'
-                    : mode === 'pvp'
-                      ? 'PLAYER VS PLAYER'
-                      : study?.id || 'GUIDED STUDY'}
+                  : mode === 'training'
+                    ? 'TRAINING SANCTUM'
+                    : mode === 'duel'
+                      ? 'THE ARCHIVIST'
+                      : mode === 'pvp'
+                        ? 'PLAYER VS PLAYER'
+                        : study?.id || 'GUIDED STUDY'}
               </span>
               <span>
-                {fighting
-                  ? combat!.condition.toUpperCase() + ' DIFFICULTY'
-                  : mode === 'pvp'
-                    ? (pvp.state?.status || 'LOBBY').toUpperCase()
-                    : mode === 'study' && study
-                      ? study.status.toUpperCase()
-                      : String(RUNE_IDS.indexOf(selected) + 1).padStart(
-                          2,
-                          '0',
-                        ) +
-                        ' / ' +
-                        String(RUNE_IDS.length).padStart(2, '0') +
-                        ' · ' +
-                        rune.name.toUpperCase()}
+                {trainingActive
+                  ? 'SAFE SANDBOX · NO SCORES SAVED'
+                  : fighting
+                    ? combat!.condition.toUpperCase() + ' DIFFICULTY'
+                    : mode === 'pvp'
+                      ? (pvp.state?.status || 'LOBBY').toUpperCase()
+                      : mode === 'study' && study
+                        ? study.status.toUpperCase()
+                        : String(RUNE_IDS.indexOf(selected) + 1).padStart(
+                            2,
+                            '0',
+                          ) +
+                          ' / ' +
+                          String(RUNE_IDS.length).padStart(2, '0') +
+                          ' · ' +
+                          rune.name.toUpperCase()}
               </span>
             </div>
             <div className="casting-surface">
@@ -1193,7 +1295,7 @@ export default function Home() {
                 className="trail-canvas"
                 aria-label="Live fingertip drawing trail"
               />
-              {!ready && mode !== 'pvp' ? (
+              {!ready && mode !== 'pvp' && mode !== 'training' ? (
                 <div className="arena-center setup-center">
                   <div className="rune-halo">
                     <RuneIcon id="ward" />
@@ -1231,6 +1333,17 @@ export default function Home() {
                   pvp={pvp}
                   cameraReady={ready}
                   tracked={tracked}
+                  onEnableCamera={() => beginCamera()}
+                />
+              ) : mode === 'training' && training ? (
+                <TrainingPanel
+                  locale={locale}
+                  state={training}
+                  onAttack={startTrainingAttack}
+                  onDamage={() => applyTraining(damageTrainingPlayer(training))}
+                  onBurn={() => applyTraining(igniteTrainingPlayer(training))}
+                  onReset={() => applyTraining(createTraining())}
+                  cameraReady={ready}
                   onEnableCamera={() => beginCamera()}
                 />
               ) : mode === 'practice' ? (
@@ -1494,24 +1607,26 @@ export default function Home() {
                   </Button>
                 </>
               )}
-              {fighting && paused && !combat!.outcome && (
-                <div className="arena-overlay">
-                  <Pause />
-                  <h2>{pauseReason}</h2>
-                  <p>
-                    {tracked
-                      ? 'Curl your index finger before resuming.'
-                      : 'Bring your hand back into view.'}
-                  </p>
-                  <Button
-                    className="primary-action"
-                    disabled={!ready || !tracked}
-                    onClick={resume}
-                  >
-                    <Play /> Resume
-                  </Button>
-                </div>
-              )}
+              {(fighting || trainingActive) &&
+                paused &&
+                (trainingActive || !combat!.outcome) && (
+                  <div className="arena-overlay">
+                    <Pause />
+                    <h2>{pauseReason}</h2>
+                    <p>
+                      {tracked
+                        ? 'Curl your index finger before resuming.'
+                        : 'Bring your hand back into view.'}
+                    </p>
+                    <Button
+                      className="primary-action"
+                      disabled={!ready || !tracked}
+                      onClick={resume}
+                    >
+                      <Play /> Resume
+                    </Button>
+                  </div>
+                )}
               {mode === 'duel' && combat?.outcome && (
                 <div className="arena-overlay">
                   <Sparkles />
@@ -1667,19 +1782,23 @@ export default function Home() {
                 <h2>
                   {mode === 'practice'
                     ? rune.name
-                    : mode === 'duel'
-                      ? 'Keep your hand in view.'
-                      : mode === 'pvp'
-                        ? 'PvP spellcasting'
-                        : 'One stroke at a time.'}
+                    : mode === 'training'
+                      ? 'Training dummy'
+                      : mode === 'duel'
+                        ? 'Keep your hand in view.'
+                        : mode === 'pvp'
+                          ? 'PvP spellcasting'
+                          : 'One stroke at a time.'}
                 </h2>
                 <p className="side-copy">
                   {mode === 'practice'
                     ? rune.effect +
                       '. Trace the guide and curl your index finger to finish.'
-                    : mode === 'pvp'
-                      ? 'Your camera stays local. Active PvP shares normalized rune coordinates, never frames or landmarks.'
-                      : 'Point with your index finger to draw. Curl the other fingers. Curl your index finger to cast.'}
+                    : mode === 'training'
+                      ? 'Free-cast every rune or choose a drill for Ward, Frost, Dispel, Mend, and Water. Nothing is saved.'
+                      : mode === 'pvp'
+                        ? 'Your camera stays local. Active PvP shares normalized rune coordinates, never frames or landmarks.'
+                        : 'Point with your index finger to draw. Curl the other fingers. Curl your index finger to cast.'}
                 </p>
                 <div className="metrics">
                   <div>
@@ -1759,7 +1878,9 @@ export default function Home() {
             <span>
               {mode === 'practice'
                 ? 'SELECT A RUNE TO PRACTICE'
-                : 'EIGHT RUNES. ONE HAND.'}
+                : mode === 'training'
+                  ? 'ALL RUNES AVAILABLE · RESULTS ARE NOT SAVED'
+                  : 'EIGHT RUNES. ONE HAND.'}
             </span>
           </div>
           <div className="rune-grid">
@@ -1787,14 +1908,24 @@ export default function Home() {
                 <strong>{r.name}</strong>
                 <small>{r.shape}</small>
                 <span className="rune-effect">{r.effect}</span>
-                {combat && (
+                {(combat || training) && (
                   <div className="spell-availability">
-                    <span>{spellAvailability(combat, r.id)}</span>
+                    <span>
+                      {combat
+                        ? spellAvailability(combat, r.id)
+                        : (training!.cooldowns[r.id] || 0) > 0
+                          ? Math.ceil((training!.cooldowns[r.id] || 0) / 1000) +
+                            's'
+                          : 'Ready'}
+                    </span>
                     <progress
                       max={r.cooldown}
                       value={Math.max(
                         0,
-                        r.cooldown - (combat.cooldowns[r.id] || 0),
+                        r.cooldown -
+                          (combat?.cooldowns[r.id] ||
+                            training?.cooldowns[r.id] ||
+                            0),
                       )}
                       aria-label={r.name + ' cooldown recovery'}
                     />
@@ -1804,7 +1935,7 @@ export default function Home() {
             ))}
           </div>
         </section>
-        {combat && battleLog.length > 0 && (
+        {(combat || training) && battleLog.length > 0 && (
           <section className="battle-log" aria-label="Recent battle events">
             <h2>Recent battle events</h2>
             <ol>
